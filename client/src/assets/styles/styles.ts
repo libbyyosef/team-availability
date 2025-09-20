@@ -16,14 +16,14 @@ export const theme = {
 };
 
 export const styles: Record<string, React.CSSProperties> = {
-  appShell: {
-  height: "100dvh",
-  width: "100vw",
-  overflow: "hidden",     // <-- prevents page-level scrollbar
+appShell: {
+  position: "fixed",
+  inset: 0,                  // top:0, right:0, bottom:0, left:0
   display: "grid",
   placeItems: "center",
   padding: 24,
   background: `linear-gradient(180deg, ${theme.blueDark} 0%, ${theme.blue} 30%, ${theme.blueLight} 60%, ${theme.white} 100%)`,
+  overflow: "hidden",        // no page-level scroll
 },
 
 
@@ -43,6 +43,7 @@ export const styles: Record<string, React.CSSProperties> = {
     borderRadius: 16,
     padding: 24,
     boxShadow: "0 10px 30px rgba(14,107,216,0.10)",
+    transform: "translateY(-18px)", 
     // no extra top margin so it centers vertically
   },
 
@@ -83,6 +84,7 @@ export const styles: Record<string, React.CSSProperties> = {
     padding: 24,
     boxShadow: "0 10px 30px rgba(14,107,216,0.10)",
     minHeight: 520,
+     transform: "translateY(-18px)", 
     // no extra top margin so it centers vertically
   },
 

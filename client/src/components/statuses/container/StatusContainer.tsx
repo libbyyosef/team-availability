@@ -95,9 +95,7 @@ export const StatusesContainer: React.FC<{
 
   // Initialize my status from the logged-in user
   useEffect(() => {
-    const u = users.find(
-      (x) => `${x.firstName} ${x.lastName}`.trim().toLowerCase() === currentFull
-    );
+    const u = users.find((x) => `${x.firstName} ${x.lastName}`.trim().toLowerCase() === currentFull);
     if (u) setMeStatus(u.status);
   }, [users, currentFull]);
 
@@ -115,9 +113,7 @@ export const StatusesContainer: React.FC<{
     const q = search.trim().toLowerCase();
 
     // 1) exclude the logged-in user
-    let out = users.filter(
-      (u) => `${u.firstName} ${u.lastName}`.trim().toLowerCase() !== currentFull
-    );
+    let out = users.filter((u) => `${u.firstName} ${u.lastName}`.trim().toLowerCase() !== currentFull);
 
     // 2) search by name
     out = out.filter((u) => {
@@ -134,8 +130,7 @@ export const StatusesContainer: React.FC<{
     out = [...out].sort((a, b) => {
       const aName = `${a.firstName} ${a.lastName}`.toLowerCase();
       const bName = `${b.firstName} ${b.lastName}`.toLowerCase();
-      const cmp =
-        sortBy === "name" ? aName.localeCompare(bName) : a.status.localeCompare(b.status);
+      const cmp = sortBy === "name" ? aName.localeCompare(bName) : a.status.localeCompare(b.status);
       return sortDir === "asc" ? cmp : -cmp;
     });
 
@@ -158,33 +153,23 @@ export const StatusesContainer: React.FC<{
     <>
       {/* Centered clock at top of page, white/light-grey text, no border/bg */}
       <div
-  style={{
-    position: "fixed",
-    top: 28,
-    left: 0,
-    right: 0,                     // full-width wrapper
-    zIndex: 60,
-    display: "flex",
-    justifyContent: "center",     // centers the inner clock perfectly
-    pointerEvents: "none",        // wrapper ignores clicks
+         style={{
+    padding: "0 6px",           // tighter vertical padding (was larger)
+    background: "transparent",
+    color: "rgba(255,255,255,0.92)",
+    fontWeight: 800,
+    letterSpacing: 0.5,
+    fontSize: 24,
+    lineHeight: 1,
+    textAlign: "center",
+    fontVariantNumeric: "tabular-nums",
+    fontFeatureSettings: '"tnum"',
+    textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+    pointerEvents: "auto",
   }}
->
-  <div
-    style={{
-      padding: "2px 8px",
-      background: "transparent",
-      color: "rgba(255,255,255,0.92)",
-      fontWeight: 800,
-      letterSpacing: 0.5,
-      fontSize: 24,
-      textShadow: "0 1px 2px rgba(0,0,0,0.25)",
-      pointerEvents: "auto",      // inner element still clickable if needed
-    }}
-    title="Asia/Jerusalem time"
-  >
-    {clock}
-  </div>
-</div>
+      >
+        {clock}
+      </div>
 
       <StatusesComponent
         userName={userName}

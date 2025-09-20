@@ -78,37 +78,84 @@ export const StatusesComponent: React.FC<{
 
   return (
     <div style={styles.dashboardWrap}>
-      {/* Header with Logout (clock lives outside in Container) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-        <h2 style={{ ...styles.title, marginBottom: 0 }}>{header}</h2>
-        <div style={{ marginLeft: "auto" }} />
-        <button
-          onClick={onLogout}
-          style={{
-            borderRadius: 10,
-            padding: "8px 14px",
-            background: theme.yellow,
-            color: theme.navy,
-            border: `1px solid ${theme.yellow}`,
-            fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 4px 10px rgba(242,195,53,0.35)",
-          }}
-        >
-          Logout
+      {/* Header with Logout */}
+     <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+    // don't force nowrap on the container; let the H2 handle truncation
+  }}
+>
+  <h2
+    style={{
+      ...styles.title,
+      marginBottom: 0,
+      textAlign: "left",     // override any center text
+      flex: "1 1 auto",      // allow to shrink
+      minWidth: 0,           // CRITICAL for ellipsis inside flex
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }}
+    title={header}
+  >
+    {header}
+  </h2>
+
+  <button
+    onClick={onLogout}
+    style={{
+      borderRadius: 10,
+      padding: "8px 14px",
+      background: theme.yellow,
+      color: theme.navy,
+      border: `1px solid ${theme.yellow}`,
+      fontWeight: 700,
+      cursor: "pointer",
+      boxShadow: "0 4px 10px rgba(242,195,53,0.35)",
+      flex: "0 0 auto",      // do not let it grow/shrink
+      whiteSpace: "nowrap",  // keep the word "Logout" intact
+    }}
+  >
+    Logout
         </button>
       </div>
 
-      <div style={{ marginBottom: 16, fontSize: 14 }}>Update my current status</div>
-      <select style={styles.select} value={meStatus} onChange={(e) => setMeStatus(e.target.value as Status)}>
-        {ALL_STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+      {/* INLINE status updater: label + select in one row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+          margin: "8px 0 16px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 16,
+            color: theme.textSecondary,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Update my current status
+        </div>
+        <select
+          style={{ ...styles.select, minWidth: 220 }}
+          value={meStatus}
+          onChange={(e) => setMeStatus(e.target.value as Status)}
+        >
+          {ALL_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <section style={{ marginTop: 32 }}>
+      <section style={{ marginTop: 16 }}>
         <h3 style={styles.sectionTitle}>Employees</h3>
 
         {/* Search (left) + Filter dropdown (right) */}
@@ -121,27 +168,34 @@ export const StatusesComponent: React.FC<{
               </svg>
             </span>
             <input
-              style={styles.search}
               type="text"
               placeholder="Search by name.."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: 260, // same width
+                background: "#fff",
+                border: "1px solid #D8E4F5", // same border
+                borderRadius: 10, // same radius
+                color: "#0B2537",
+                padding: "10px 12px", // same padding
+              }}
             />
           </div>
 
-          {/* Right: dropdown only (no headline) */}
+          {/* Right: dropdown only */}
           <div ref={wrapRef} style={{ position: "relative", width: 260 }}>
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-haspopup="listbox"
               style={{
-                width: "100%", // fill the 260px wrapper
-                border: "1px solid #D8E4F5",
+                width: "100%", // fills the 260px wrapper
                 background: "#fff",
+                border: "1px solid #D8E4F5", // same border
+                borderRadius: 10, // same radius
                 color: statusFilters.length ? "#0B2537" : "#4B6172",
-                borderRadius: 10,
-                padding: "10px 12px", // match search padding
+                padding: "10px 12px", // same padding
                 cursor: "pointer",
                 fontWeight: 400,
                 textAlign: "left",
@@ -157,7 +211,7 @@ export const StatusesComponent: React.FC<{
                   top: "110%",
                   right: 0,
                   zIndex: 50,
-                  width: 260, // match wrapper/search width
+                  width: 260,
                   background: "#fff",
                   border: "1px solid #D8E4F5",
                   borderRadius: 12,
@@ -165,6 +219,12 @@ export const StatusesComponent: React.FC<{
                   padding: 10,
                 }}
               >
+                {/* local style for grey placeholder */}
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: `.status-filter-search::placeholder{ color:#9CA3AF; opacity:1 }`,
+                  }}
+                />
                 <input
                   className="status-filter-search"
                   autoFocus
@@ -173,7 +233,7 @@ export const StatusesComponent: React.FC<{
                   placeholder="Search statuses…"
                   style={{
                     display: "block",
-                    width: "85%", // slightly inset inside 260px panel
+                    width: "85%",
                     margin: "6px auto",
                     background: "#fff",
                     border: "1px solid #D8E4F5",
@@ -241,7 +301,7 @@ export const StatusesComponent: React.FC<{
           </div>
         </div>
 
-        {/* Table (fixed-height viewport so page doesn’t shrink) */}
+        {/* Table */}
         <div style={styles.tableScroll}>
           <table style={styles.table}>
             <thead>
