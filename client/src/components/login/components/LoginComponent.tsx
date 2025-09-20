@@ -1,4 +1,3 @@
-// client/src/components/login/components/LoginComponent.tsx
 import React from "react";
 import { styles } from "../../../assets/styles/styles";
 
@@ -26,7 +25,7 @@ export const LoginComponent: React.FC<{
           <input
             style={styles.input}
             type="email"
-            placeholder="Enter your email"
+            placeholder="enter your email"
             value={username}
             onChange={(e) => onChangeUser(e.target.value)}
           />
@@ -37,7 +36,7 @@ export const LoginComponent: React.FC<{
           <input
             style={styles.input}
             type="password"
-            placeholder="Enter your password"
+            placeholder="enter your password"
             value={password}
             onChange={(e) => onChangePass(e.target.value)}
           />

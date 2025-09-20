@@ -1,27 +1,36 @@
-// PubPlus-inspired theme
+import React from "react";
+
+// PubPlus-like palette
 export const theme = {
-  blue:  "#0A66C2",  // primary blue
-  yellow:"#FFC107",  // accent yellow
-  ink:   "#162647ff",
-  ink2:  "#0f172a",
-  slate: "#1f2937",
-  text:  "#eaf2ff",
-  textDim:"#b8c7e6",
+  blueDark: "#0E6BD8",
+  blue: "#1674E0",
+  blueLight: "#8FC4FB",
+  navy: "#0B2537",
+  yellow: "#F2C335",
+  border: "#aeccf3ff",
+  white: "#eeeeeeee",
+  grayRow: "#c5c7caff",
+
+  textPrimary: "#0B2537",   // dark blue
+  textSecondary: "#4B6172", // soft grey
 };
 
 export const styles: Record<string, React.CSSProperties> = {
   appShell: {
-    minHeight: "100vh",
-    display: "grid",
-    placeItems: "center",
-    padding: 24,
-    background: `linear-gradient(135deg, ${theme.blue} 0%, ${theme.ink2} 60%)`,
-  },
+  height: "100dvh",
+  width: "100vw",
+  overflow: "hidden",     // <-- prevents page-level scrollbar
+  display: "grid",
+  placeItems: "center",
+  padding: 24,
+  background: `linear-gradient(180deg, ${theme.blueDark} 0%, ${theme.blue} 30%, ${theme.blueLight} 60%, ${theme.white} 100%)`,
+},
+
 
   title: {
-    color: theme.yellow,
-    fontSize: 26,
-    letterSpacing: 0.6,
+    color: theme.textPrimary,
+    fontSize: 28,
+    fontWeight: 800,
     textAlign: "center",
     marginBottom: 8,
   },
@@ -29,23 +38,25 @@ export const styles: Record<string, React.CSSProperties> = {
   centerCard: {
     width: "100%",
     maxWidth: 460,
-    background: theme.ink,
-    border: `1px solid ${theme.slate}`,
+    background: theme.white,
+    border: `1px solid ${theme.border}`,
     borderRadius: 16,
     padding: 24,
-    boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+    boxShadow: "0 10px 30px rgba(14,107,216,0.10)",
+    // no extra top margin so it centers vertically
   },
 
   formRow: { display: "flex", flexDirection: "column", gap: 8, marginTop: 16 },
-  label: { color: theme.textDim, fontSize: 14 },
+
+  label: { color: theme.textSecondary, fontSize: 14, fontWeight: 600 },
 
   input: {
-    background: "#0a0f1a",
-    border: `1px solid ${theme.blue}`,
-    outline: `2px solid transparent`,
+    background: theme.white,
+    border: `1px solid ${theme.border}`,
     borderRadius: 12,
     padding: "12px 14px",
-    color: theme.text,
+    color: theme.textPrimary,
+    boxShadow: "inset 0 1px 0 rgba(0,0,0,0.02)",
   },
 
   primaryBtn: {
@@ -53,72 +64,125 @@ export const styles: Record<string, React.CSSProperties> = {
     marginTop: 20,
     padding: "12px 16px",
     background: theme.yellow,
-    color: "#1d1d1f",
+    color: theme.navy,
     border: 0,
     borderRadius: 12,
     cursor: "pointer",
-    fontWeight: 700,
-    boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
+    fontWeight: 800,
+    letterSpacing: 0.2,
+    boxShadow: "0 6px 16px rgba(242,195,53,0.35)",
   },
 
-  // Statuses screen bits (kept but recolored)
+  // ===== Statuses screen =====
   dashboardWrap: {
     width: "100%",
     maxWidth: 980,
-    background: theme.ink,
-    border: `1px solid ${theme.slate}`,
+    background: theme.white,
+    border: `1px solid ${theme.border}`,
     borderRadius: 16,
     padding: 24,
-    boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+    boxShadow: "0 10px 30px rgba(14,107,216,0.10)",
+    minHeight: 520,
+    // no extra top margin so it centers vertically
   },
-  sectionTitle: { color: theme.yellow, fontSize: 18, marginBottom: 12 },
+
+  sectionTitle: {
+    color: theme.textPrimary,
+    fontSize: 18,
+    marginBottom: 12,
+    fontWeight: 800,
+  },
 
   select: {
-    background: "#0a0f1a",
-    border: `1px solid ${theme.blue}`,
+    background: theme.white,
+    border: `1px solid ${theme.border}`,
     borderRadius: 10,
-    color: theme.text,
+    color: theme.textPrimary,
     padding: "10px 12px",
   },
 
   filtersRow: {
     marginTop: 12,
+    marginBottom: 16,
     display: "flex",
     flexWrap: "wrap",
     gap: 12,
-    alignItems: "center",
+    alignItems: "flex-end",
+    justifyContent: "space-between", // search left, filter right
   },
 
   search: {
     flex: "0 1 260px",
-    background: "#0a0f1a",
-    border: `1px solid ${theme.blue}`,
+    background: theme.white,
+    border: `1px solid ${theme.border}`,
     borderRadius: 10,
-    color: theme.text,
+    color: theme.textPrimary,
     padding: "10px 12px",
+  },
+
+  // Search with icon
+  searchGroup: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  searchIcon: {
+    display: "inline-flex",
+    width: 18,
+    height: 18,
+    opacity: 0.7,
+    color: theme.textSecondary,
+  },
+
+  // Right-side filter (headline removed per latest design)
+  filterGroup: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: 6,
+  },
+
+  // fixed-height viewport so only rows scroll
+  tableScroll: {
+    height: 420,
+    overflowY: "auto",
+    overflowX: "auto",
+    borderRadius: 10,
+    border: `1px solid ${theme.border}`,
+    background: theme.white,
   },
 
   table: {
     width: "100%",
     borderCollapse: "separate",
     borderSpacing: 0,
-    marginTop: 12,
+    marginTop: 0,
   },
+
   th: {
     textAlign: "left",
     padding: "12px 14px",
-    color: theme.textDim,
-    fontWeight: 700,
+    color: theme.textSecondary,
+    fontWeight: 800,
     borderBottom: `2px solid ${theme.blue}`,
     position: "sticky",
     top: 0,
-    background: theme.ink,
+    background: theme.white,
   },
+
   td: {
     padding: "12px 14px",
-    color: theme.text,
-    borderBottom: `1px solid ${theme.slate}`,
+    color: theme.textPrimary,
+    borderBottom: `1px solid ${theme.border}`,
   },
-  vacationRow: { background: "#4b4e53ff" },
-  vacationCell: { color: "#9ca3af", fontStyle: "italic" },
+
+  // Vacation row styling (light grey row)
+  vacationRow: {
+    background: theme.grayRow,
+  },
+  vacationCell: {
+    color: theme.textPrimary,
+    fontStyle: "italic",
+    fontWeight: 600,
+  },
 };

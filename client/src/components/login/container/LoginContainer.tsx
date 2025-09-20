@@ -1,17 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { LoginComponent } from "../components/LoginComponent";
-import { authenticate } from "../../../assets/types/types";
+import { SEED_USERS, fullName } from "../../../assets/types/types";
 
-// Inline toast hook
+// Inline toast hook (green success, red error, blue info)
 type ToastType = "success" | "error" | "info";
 function useToast(autoHideMs = 2200) {
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
-  useEffect(() => {
+
+  React.useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), autoHideMs);
     return () => clearTimeout(t);
   }, [toast, autoHideMs]);
+
   const show = (msg: string, type: ToastType) => setToast({ msg, type });
+
   const element = toast ? (
     <div
       role="alert"
@@ -20,7 +23,8 @@ function useToast(autoHideMs = 2200) {
         top: 16,
         right: 16,
         zIndex: 9999,
-        background: toast.type === "success" ? "#16a34a" : toast.type === "error" ? "#ef4444" : "#2563eb",
+        background:
+          toast.type === "success" ? "#16a34a" : toast.type === "error" ? "#ef4444" : "#2563eb",
         color: "white",
         padding: "10px 14px",
         borderRadius: 10,
@@ -50,24 +54,35 @@ function useToast(autoHideMs = 2200) {
       </button>
     </div>
   ) : null;
+
   return { show, element };
 }
 
-export const LoginContainer: React.FC<{ onAuthed: (displayName: string) => void }> = ({ onAuthed }) => {
-  const [username, setUsername] = useState(""); // email
+export const LoginContainer: React.FC<{
+  onAuthed: (fullName: string) => void;
+}> = ({ onAuthed }) => {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { show, element: toast } = useToast();
 
-  const handleLogin = () => {
-    const user = authenticate(username, password);
-    if (!user) {
-      show("Wrong email or password", "error");
+  const handleLogin = useCallback(() => {
+    const email = username.trim().toLowerCase();
+    const pass = password.trim();
+
+    if (!email || !pass) {
+      show("enter your email and password.", "error");
       return;
     }
-    // exact text as requested:
-    show("you logged in succesfully", "success");
-    onAuthed(`${user.firstName} ${user.lastName}`.trim());
-  };
+
+    const user = SEED_USERS.find((u) => u.email.toLowerCase() === email);
+    if (!user || user.password !== pass) {
+      show("Wrong email or password.", "error");
+      return;
+    }
+
+    // Success toast is shown on the Statuses screen after navigation.
+    onAuthed(fullName(user));
+  }, [username, password, onAuthed, show]);
 
   return (
     <>
