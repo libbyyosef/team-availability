@@ -3,15 +3,63 @@ import { styles, theme } from "../../../assets/styles/styles";
 import { ALL_STATUSES, fullName, Status } from "../../../assets/types/types";
 import type { User } from "../../../assets/types/types";
 
-/** helpers: label ↔ canonical */
-const canonicalFromLabel = (label: string): Status =>
-  label.replace(/\s+/g, "") as Status;
+/** ---------- label ↔ canonical helpers (typo-tolerant) ---------- */
+const normalizeKey = (s: string) => s.toLowerCase().replace(/[\s\-_]/g, "");
 
-const labelFromCanonical = (canon: Status): string =>
-  ALL_STATUSES.find((lbl) => canonicalFromLabel(lbl) === canon) ?? String(canon);
+const CANON_BY_KEY: Record<string, Status> = {
+  // Working
+  working: Status.Working,
+
+  // Working Remotely
+  workingremotely: Status.WorkingRemotely,
+
+  // On Vacation (include common typos)
+  onvacation: Status.OnVacation,
+  vacation: Status.OnVacation,
+  onvaction: Status.OnVacation,
+  onvactaion: Status.OnVacation,
+  onvaciton: Status.OnVacation,
+  onvacay: Status.OnVacation,
+
+  // Business Trip (and backend typo once normalized)
+  businesstrip: Status.BusinessTrip,
+  buissnesstrip: Status.BusinessTrip,
+};
+
+const canonicalFromLabel = (label: string): Status => {
+  const key = normalizeKey(label);
+  return CANON_BY_KEY[key] ?? (label.replace(/\s+/g, "") as Status);
+};
+
+/**
+ * Always show the same label that appears in ALL_STATUSES (filter list).
+ * If we can't find a match, fall back to a humanized string (spaces in camelCase),
+ * and for "onvaction"-style typos, prefer inserting a space after "on".
+ */
+const labelForDisplay = (value: Status | string): string => {
+  const canon = canonicalFromLabel(String(value)); // normalize (handles typos)
+  const fromList = ALL_STATUSES.find((lbl) => canonicalFromLabel(lbl) === canon);
+  if (fromList) return fromList;
+
+  const raw = String(value).trim();
+  // Heuristic for "onvaction" -> "on vaction" (and similar)
+  if (/^on[v]/i.test(normalizeKey(raw))) {
+    return raw.replace(/^\s*on\s*/i, "on ").replace(/\s+/g, " ").trim();
+  }
+
+  // Fallback: humanize the canonical (WorkingRemotely -> "Working Remotely")
+  return canon.replace(/([a-z])([A-Z])/g, "$1 $2");
+};
+
+const isVacation = (value: Status | string): boolean =>
+  canonicalFromLabel(String(value)) === Status.OnVacation;
+
+/** ---- Vacation row color (apply to WHOLE ROW) ---- */
+const VACATION_ROW_BG = "#797a7cff"; // uniform darker grey across the entire row
 
 /**
  * Keeps the light-blue table strokes (#D8E4F5), navy text, and yellow accents.
+ * Layout is unchanged except the vacation row coloring and status label display.
  */
 export const StatusesComponent: React.FC<{
   userName: string;
@@ -76,7 +124,8 @@ export const StatusesComponent: React.FC<{
     [q]
   );
 
-  const arrow = (col: "name" | "status") => (sortBy === col ? (sortDir === "asc" ? "▲" : "▼") : "↕");
+  const arrow = (col: "name" | "status") =>
+    sortBy === col ? (sortDir === "asc" ? "▲" : "▼") : "↕";
 
   const thClickable: React.CSSProperties = {
     ...styles.th,
@@ -85,18 +134,17 @@ export const StatusesComponent: React.FC<{
   };
 
   return (
-    // ===== Centering wrapper (new) =====
+    // Centering wrapper (kept)
     <div
       style={{
-        // centers the card window in the viewport
         display: "grid",
         placeItems: "center",
         width: "100%",
-        minHeight: "calc(100dvh - 120px)", // leave room for your clock/header above
+        minHeight: "calc(100dvh - 120px)",
         padding: 16,
       }}
     >
-      {/* Main card (unchanged styles, plus maxWidth to keep it as a centered “window”) */}
+      {/* Main card */}
       <div
         style={{
           ...styles.dashboardWrap,
@@ -105,7 +153,7 @@ export const StatusesComponent: React.FC<{
           borderRadius: 16,
           padding: 16,
           width: "100%",
-          maxWidth: 980, // keeps it as a centered window
+          maxWidth: 980,
         }}
       >
         {/* Header + Logout */}
@@ -173,6 +221,7 @@ export const StatusesComponent: React.FC<{
             Update my current status
           </div>
 
+          {/* Option value = canonical; text = label (typo tolerant mapping when read) */}
           <select
             style={{ ...styles.select, minWidth: 220 }}
             value={meStatus}
@@ -365,12 +414,34 @@ export const StatusesComponent: React.FC<{
               </thead>
               <tbody>
                 {users.map((u) => {
-                  const isVacation = u.status === Status.OnVacation;
+                  const vac = isVacation(u.status);
                   return (
-                    <tr key={u.id} style={isVacation ? styles.vacationRow : undefined}>
-                      <td style={styles.td}>{fullName(u)}</td>
-                      <td style={{ ...styles.td, ...(isVacation ? styles.vacationCell : {}) }}>
-                        {labelFromCanonical(u.status)}
+                    <tr
+                      key={u.id}
+                      style={
+                        vac
+                          ? {
+                              ...(styles.vacationRow ?? {}),
+                              background: VACATION_ROW_BG, // apply to whole row
+                            }
+                          : undefined
+                      }
+                    >
+                      <td
+                        style={{
+                          ...styles.td,
+                          ...(vac ? { background: VACATION_ROW_BG } : null),
+                        }}
+                      >
+                        {fullName(u)}
+                      </td>
+                      <td
+                        style={{
+                          ...styles.td,
+                          ...(vac ? { background: VACATION_ROW_BG, fontWeight: 700 } : null),
+                        }}
+                      >
+                        {labelForDisplay(u.status)}
                       </td>
                     </tr>
                   );

@@ -329,7 +329,7 @@ export const StatusesContainer: React.FC<{
   return (
     <>
       {/* centered clock on top */}
-      <div
+      {/* <div
         style={{
           padding: "0 6px",
           background: "transparent",
@@ -345,7 +345,7 @@ export const StatusesContainer: React.FC<{
         }}
       >
         {clock}
-      </div>
+      </div> */}
 
       <StatusesComponent
         userName={userName}
