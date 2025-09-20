@@ -6,15 +6,15 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from schemas.user_statuses_schema import (
+from server.schemas.user_statuses_schema import (
     UserStatusCreate,
     UserStatusUpdate,
     UserStatusPublic,
     UserStatusesList,
 )
-from crud import user_status_crud
-from routers.responses import load_responses
-from sql_db.db import get_db
+from server.crud import user_status_crud
+from server.routers.responses import load_responses
+from server.sql_db.db import get_db
 
 router = APIRouter(prefix="/user_statuses", tags=["User Statuses"])
 

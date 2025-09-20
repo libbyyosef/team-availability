@@ -1,5 +1,10 @@
 from __future__ import annotations
 from pathlib import Path
+import sys
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 import json, time
@@ -8,15 +13,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from ..sql_db.db import engine, SessionLocal
+from server.sql_db.db import engine, SessionLocal
 
-from ..crud.user_crud import create_user
-from ..crud.user_status_crud import upsert_user_status
+from server.crud.user_crud import create_user
+from server.crud.user_status_crud import upsert_user_status
 
-from ..schemas.user_schema import UserCreate
-from ..schemas.user_statuses_schema import UserStatusCreate
-from ..models.user_model import User
-from ..routers.hashing import hash_password  
+from server.schemas.user_schema import UserCreate
+from server.schemas.user_statuses_schema import UserStatusCreate
+from server.models.user_model import User
+from server.routers.hashing import hash_password  
 
 DEFAULT_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "sql_db" / "schema.sql"
 

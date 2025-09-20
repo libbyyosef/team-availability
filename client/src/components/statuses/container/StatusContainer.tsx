@@ -1,13 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { SEED_USERS } from "../../../assets/types/types";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { Status, User } from "../../../assets/types/types";
-
+import { ALL_STATUSES } from "../../../assets/types/types";
 import { StatusesComponent } from "../components/StatusComponent";
 
-type SortBy = "name" | "status";
-type SortDir = "asc" | "desc";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const POLL_MS = 180_000; // 3 minutes
 
-// Inline toast hook (green success, red error, blue info)
+// ------ Minimal inline toast (unchanged) ------
 type ToastType = "success" | "error" | "info";
 function useToast(autoHideMs = 2200) {
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
@@ -58,25 +57,56 @@ function useToast(autoHideMs = 2200) {
   return { show, element };
 }
 
+// ------ Backend shapes ------
+type BackendUserNameStatus = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  status: string | null;
+};
+type BackendUsersList = { users: BackendUserNameStatus[] };
+type BackendMyStatus = BackendUserNameStatus;
+
+// ------ Helpers ------
+const toStatus = (s: string | null | undefined): Status => {
+  const norm = (s ?? "").toString();
+  return (ALL_STATUSES as readonly string[]).includes(norm) ? (norm as Status) : ("Working" as Status);
+};
+const mapUser = (u: BackendUserNameStatus): User => ({
+  id: u.id,
+  firstName: u.first_name,
+  lastName: u.last_name,
+  email: "",
+  password: "",
+  status: toStatus(u.status),
+});
+
+type SortBy = "name" | "status";
+type SortDir = "asc" | "desc";
+
 export const StatusesContainer: React.FC<{
   userName: string;
   onLogout: () => void;
 }> = ({ userName, onLogout }) => {
-  const [users, setUsers] = useState<User[]>(SEED_USERS);
+  const { show, element: toast } = useToast();
+  const showRef = useRef(show);
+  useEffect(() => {
+    showRef.current = show;
+  }, [show]);
+
+  const [usersRaw, setUsersRaw] = useState<User[]>([]);
   const [meStatus, setMeStatus] = useState<Status>("Working" as Status);
   const [search, setSearch] = useState("");
   const [statusFilters, setStatusFilters] = useState<Status[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const { show, element: toast } = useToast();
-
-  // Show green toast on mount (after successful login)
+  // success toast after login
   useEffect(() => {
-    show("you logged in succesfully", "success");
-  }, []); // once
+    showRef.current("you logged in succesfully", "success");
+  }, []);
 
-  // Centered clock (Asia/Jerusalem) outside the card
+  // Clock
   const [clock, setClock] = useState<string>("");
   useEffect(() => {
     const fmt = () =>
@@ -93,40 +123,101 @@ export const StatusesContainer: React.FC<{
 
   const currentFull = userName.trim().toLowerCase();
 
-  // Initialize my status from the logged-in user
+  // Fetch "me" status once (on mount). Could also be polled if desired.
   useEffect(() => {
-    const u = users.find((x) => `${x.firstName} ${x.lastName}`.trim().toLowerCase() === currentFull);
-    if (u) setMeStatus(u.status);
-  }, [users, currentFull]);
+    let cancelled = false;
+    const ctrl = new AbortController();
 
-  // Keep my status synced in the list
+    (async () => {
+      try {
+        const meRes = await fetch(`${API_URL}/users/me/status`, {
+          credentials: "include",
+          signal: ctrl.signal,
+        });
+        if (!meRes.ok) {
+          if (meRes.status === 401 || meRes.status === 403) {
+            showRef.current("Session expired. Please log in again.", "error");
+            onLogout();
+            return;
+          }
+          showRef.current(`Failed to load your status (${meRes.status}).`, "error");
+          return;
+        }
+        const meData: BackendMyStatus = await meRes.json();
+        if (!cancelled) setMeStatus(toStatus(meData.status));
+      } catch {
+        if (!cancelled) showRef.current("Network error. Please try again.", "error");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+    };
+  }, [onLogout]);
+
+  // Function to fetch ALL users (stable)
+  const fetchAllUsers = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch(`${API_URL}/users/list_users_with_statuses`, {
+        credentials: "include",
+        signal,
+      });
+      
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          showRef.current("Session expired. Please log in again.", "error");
+          onLogout();
+          return;
+        }
+        showRef.current(`Failed to load users (${res.status}).`, "error");
+        return;
+      }
+      
+      const data: BackendUsersList = await res.json();
+      setUsersRaw(data.users.map(mapUser));
+    } catch {
+      showRef.current("Network error. Please try again.", "error");
+    }
+  }, [onLogout]);
+
+  // Initial load + poll every 3 minutes
   useEffect(() => {
-    setUsers((prev) =>
-      prev.map((x) => {
-        const full = `${x.firstName} ${x.lastName}`.trim().toLowerCase();
-        return full === currentFull ? { ...x, status: meStatus } : x;
-      })
-    );
-  }, [meStatus, currentFull]);
+    let cancelled = false;
 
+    // immediate fetch
+    const ctrl = new AbortController();
+    fetchAllUsers(ctrl.signal);
+
+    // interval polling
+    const id = setInterval(() => {
+      if (cancelled) return;
+      const c = new AbortController();
+      fetchAllUsers(c.signal);
+      // optional: store controller to abort old polls if needed
+    }, POLL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      ctrl.abort();
+    };
+  }, [fetchAllUsers]);
+
+  // Client-side filter/sort (exclude current user from table)
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    // 1) exclude the logged-in user
-    let out = users.filter((u) => `${u.firstName} ${u.lastName}`.trim().toLowerCase() !== currentFull);
+    let out = usersRaw.filter((u) => `${u.firstName} ${u.lastName}`.trim().toLowerCase() !== currentFull);
 
-    // 2) search by name
-    out = out.filter((u) => {
-      const name = `${u.firstName} ${u.lastName}`.toLowerCase();
-      return !q || name.includes(q);
-    });
+    if (q) {
+      out = out.filter((u) => (`${u.firstName} ${u.lastName}`).toLowerCase().includes(q));
+    }
 
-    // 3) status filter (multi)
     if (statusFilters.length > 0) {
       out = out.filter((u) => statusFilters.includes(u.status));
     }
 
-    // 4) sort
     out = [...out].sort((a, b) => {
       const aName = `${a.firstName} ${a.lastName}`.toLowerCase();
       const bName = `${b.firstName} ${b.lastName}`.toLowerCase();
@@ -135,7 +226,7 @@ export const StatusesContainer: React.FC<{
     });
 
     return out;
-  }, [users, currentFull, search, statusFilters, sortBy, sortDir]);
+  }, [usersRaw, currentFull, search, statusFilters, sortBy, sortDir]);
 
   const toggleFilter = (s: Status) =>
     setStatusFilters((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
@@ -151,22 +242,22 @@ export const StatusesContainer: React.FC<{
 
   return (
     <>
-      {/* Centered clock at top of page, white/light-grey text, no border/bg */}
+      {/* Centered clock */}
       <div
-         style={{
-    padding: "0 6px",           // tighter vertical padding (was larger)
-    background: "transparent",
-    color: "rgba(255,255,255,0.92)",
-    fontWeight: 800,
-    letterSpacing: 0.5,
-    fontSize: 24,
-    lineHeight: 1,
-    textAlign: "center",
-    fontVariantNumeric: "tabular-nums",
-    fontFeatureSettings: '"tnum"',
-    textShadow: "0 1px 2px rgba(0,0,0,0.25)",
-    pointerEvents: "auto",
-  }}
+        style={{
+          padding: "0 6px",
+          background: "transparent",
+          color: "rgba(255,255,255,0.92)",
+          fontWeight: 800,
+          letterSpacing: 0.5,
+          fontSize: 24,
+          lineHeight: 1,
+          textAlign: "center",
+          fontVariantNumeric: "tabular-nums",
+          fontFeatureSettings: '"tnum"',
+          textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+          pointerEvents: "auto",
+        }}
       >
         {clock}
       </div>

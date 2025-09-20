@@ -5,17 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
-from sql_db.db import get_db
-from crud import user_crud
-from schemas.user_schema import UserPublic
-from server.security.passwords import verify_password  # <--- here
+from server.sql_db.db import get_db
+from server.crud import user_crud
+from server.schemas.user_schema import UserPublic
+from server.routers.hashing import verify_password  # <--- here
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 COOKIE_NAME = "uid"
 COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60  # 7 days
 SAMESITE = "lax"
-COOKIE_SECURE = False  # ⚠️ set True only behind HTTPS; for localhost dev keep False
+COOKIE_SECURE = True  # ⚠️ set True only behind HTTPS; for localhost dev keep False
 
 class LoginPayload(BaseModel):
     email: EmailStr
@@ -27,7 +27,6 @@ def login(payload: LoginPayload, response: Response, db: Session = Depends(get_d
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # DB stores the HASH in user.password (per your create_user contract)
     if not verify_password(payload.password, user.password or ""):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 

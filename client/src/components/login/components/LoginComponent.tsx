@@ -12,6 +12,7 @@ export const LoginComponent: React.FC<{
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
+    
     onLogin();
   };
 

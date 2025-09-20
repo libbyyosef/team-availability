@@ -1,32 +1,69 @@
+// components/login/container/LoginContainer.tsx
 import React, { useCallback, useState } from "react";
-// Chakra v3 toast lives in @chakra-ui/toast
-import { useToast } from "@chakra-ui/toast";
+import { useToast } from "@chakra-ui/toast";          // v3 hook (works with fallback below)
 import { LoginComponent } from "../components/LoginComponent";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const LOGIN_TIMEOUT_MS = 8000; // show error if backend doesn't respond in time
 
 export const LoginContainer: React.FC<{ onAuthed: (fullName: string) => void }> = ({ onAuthed }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);      // prevent double submits
   const toast = useToast();
-  const [loading, setLoading] = useState(false); // local, not passed to child (keeps props as requested)
 
+  // Works with both Chakra v3 (toast.create) and classic API (toast({...}))
   const notify = useCallback(
-    (title: string, status: "success" | "error" | "info" | "warning", description?: string) =>
-      // Your installed toast type supports the classic function API
-      toast({
-        title,
-        description,
-        status,
-        duration: 2200,
-        isClosable: true,
-        position: "top-right",
-      }),
+    (title: string, kind: "success" | "error" | "info" | "warning", description?: string) => {
+      try {
+        // @ts-ignore - runtime feature detection for v3 API
+        if (typeof (toast as any).create === "function") {
+          // @ts-ignore
+          (toast as any).create({
+            title,
+            description,
+            type: kind,            // v3
+            duration: 2500,
+            closable: true,
+            placement: "top-end",
+          });
+        } else {
+          // Classic API shape
+          (toast as any)({
+            title,
+            description,
+            status: kind,
+            duration: 2500,
+            isClosable: true,
+            position: "top-right",
+          });
+        }
+      } catch {
+        // swallow toast errors silently
+      }
+    },
     [toast]
   );
 
-  // Keep onLogin: () => void by wrapping async flow
+  // Extract a useful message from FastAPI error responses
+  const readErrorMessage = async (res: Response): Promise<string> => {
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return `Login failed (${res.status}). Please try again.`;
+    try {
+      const data = await res.json();
+      if (typeof data?.detail === "string") return data.detail;
+      if (Array.isArray(data?.detail) && data.detail.length && typeof data.detail[0]?.msg === "string") {
+        return data.detail[0].msg;
+      }
+    } catch {
+      /* ignore */
+    }
+    return `Login failed (${res.status}). Please try again.`;
+  };
+
   const handleLogin = useCallback(() => {
+    if (loading) return; // prevent double-submits while in flight
+
     (async () => {
       const email = username.trim().toLowerCase();
       const pass = password.trim();
@@ -37,41 +74,64 @@ export const LoginContainer: React.FC<{ onAuthed: (fullName: string) => void }> 
       }
 
       setLoading(true);
+
+      // Add a timeout to fail fast if the server doesn't respond
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), LOGIN_TIMEOUT_MS);
+
       try {
         const res = await fetch(`${API_URL}/auth/login`, {
           method: "POST",
-          credentials: "include", // send/receive cookie
+          credentials: "include",                // send/receive cookie
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password: pass }),
+          signal: ctrl.signal,
         });
 
+        clearTimeout(timer);
+
         if (!res.ok) {
-          notify("Login failed", "error", "Wrong email or password.");
+          let msg: string;
+          switch (res.status) {
+            case 401:
+              msg = (await readErrorMessage(res)) || "Wrong email or password.";
+              break;
+            case 404:
+              msg = "User not found.";
+              break;
+            case 422:
+              msg = (await readErrorMessage(res)) || "Invalid input.";
+              break;
+            default:
+              msg = (await readErrorMessage(res)) || "Unexpected error. Please try again.";
+          }
+          notify("Login failed", "error", msg);
           return;
         }
 
-        const user = await res.json(); // expects UserPublic { first_name, last_name, ... }
+        const user = await res.json(); // { first_name, last_name, ... }
         notify("Logged in", "success");
         onAuthed(`${user.first_name} ${user.last_name}`);
-      } catch {
-        notify("Network error", "error", "Please try again.");
+      } catch (err: any) {
+        clearTimeout(timer);
+        if (err?.name === "AbortError") {
+          notify("Request timed out", "error", "The server didn’t respond. Please try again.");
+        } else {
+          notify("Network error", "error", "Couldn’t reach the server. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
     })();
-  }, [username, password, notify, onAuthed]);
+  }, [username, password, loading, notify, onAuthed]);
 
   return (
-    <>
-      <LoginComponent
-        username={username}
-        password={password}
-        onChangeUser={setUsername}
-        onChangePass={setPassword}
-        onLogin={handleLogin}
-      />
-      {/* No visual spinner in the child per your prop contract,
-          but 'loading' is still tracked here if you want to wire it later. */}
-    </>
+    <LoginComponent
+      username={username}
+      password={password}
+      onChangeUser={setUsername}
+      onChangePass={setPassword}
+      onLogin={handleLogin}
+    />
   );
 };
