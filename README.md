@@ -199,3 +199,23 @@ repo/
 
 - **Login fails**  
   Emails are **case-sensitive**; use the exact addresses listed above.
+
+
+---
+
+## Tech Stack
+
+### Frontend
+- React + Vite + TypeScript
+- Chakra UI
+- Jotai (state)
+- Vitest + Testing Library (jsdom)
+
+### Backend
+- FastAPI
+- SQLAlchemy 2.x + Psycopg
+- Pydantic
+
+### Infra
+- PostgreSQL
+- Docker & docker-compose
