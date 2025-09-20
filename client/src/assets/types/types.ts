@@ -13,7 +13,7 @@ export type User = {
   firstName: string;
   lastName: string;
   email: string;     // login (username)
-  password: string;  // seed only (FirstName123!)
+  password: string;  // hashed
   status: Status;
 };
 

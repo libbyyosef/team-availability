@@ -1,6 +1,5 @@
 import React from "react";
 
-// PubPlus-like palette
 export const theme = {
   blueDark: "#0E6BD8",
   blue: "#1674E0",
@@ -11,19 +10,19 @@ export const theme = {
   white: "#eeeeeeee",
   grayRow: "#c5c7caff",
 
-  textPrimary: "#0B2537",   // dark blue
-  textSecondary: "#4B6172", // soft grey
+  textPrimary: "#0B2537",   
+  textSecondary: "#4B6172", 
 };
 
 export const styles: Record<string, React.CSSProperties> = {
 appShell: {
   position: "fixed",
-  inset: 0,                  // top:0, right:0, bottom:0, left:0
+  inset: 0,                  
   display: "grid",
   placeItems: "center",
   padding: 24,
   background: `linear-gradient(180deg, ${theme.blueDark} 0%, ${theme.blue} 30%, ${theme.blueLight} 60%, ${theme.white} 100%)`,
-  overflow: "hidden",        // no page-level scroll
+  overflow: "hidden",        
 },
 
 
@@ -44,7 +43,6 @@ appShell: {
     padding: 24,
     boxShadow: "0 10px 30px rgba(14,107,216,0.10)",
     transform: "translateY(-18px)", 
-    // no extra top margin so it centers vertically
   },
 
   formRow: { display: "flex", flexDirection: "column", gap: 8, marginTop: 16 },
@@ -85,7 +83,6 @@ appShell: {
     boxShadow: "0 10px 30px rgba(14,107,216,0.10)",
     minHeight: 520,
      transform: "translateY(-18px)", 
-    // no extra top margin so it centers vertically
   },
 
   sectionTitle: {
@@ -110,7 +107,7 @@ appShell: {
     flexWrap: "wrap",
     gap: 12,
     alignItems: "flex-end",
-    justifyContent: "space-between", // search left, filter right
+    justifyContent: "space-between", 
   },
 
   search: {
@@ -136,7 +133,6 @@ appShell: {
     color: theme.textSecondary,
   },
 
-  // Right-side filter (headline removed per latest design)
   filterGroup: {
     display: "flex",
     flexDirection: "column",
@@ -144,7 +140,6 @@ appShell: {
     gap: 6,
   },
 
-  // fixed-height viewport so only rows scroll
   tableScroll: {
     height: 420,
     overflowY: "auto",
@@ -178,7 +173,6 @@ appShell: {
     borderBottom: `1px solid ${theme.border}`,
   },
 
-  // Vacation row styling (light grey row)
   vacationRow: {
     background: theme.grayRow,
   },

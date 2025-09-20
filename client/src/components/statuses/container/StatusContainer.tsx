@@ -4,9 +4,9 @@ import { ALL_STATUSES } from "../../../assets/types/types";
 import { StatusesComponent } from "../components/StatusComponent";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const POLL_MS = 180_000;
+const POLL_MS = 180_000 as const;
 
-// lightweight inline toast (keeps UI minimal; colors come from inline)
+// ---------------- Toast ----------------
 type ToastType = "success" | "error" | "info";
 function useInlineToast(autoHideMs = 2200) {
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
@@ -15,7 +15,9 @@ function useInlineToast(autoHideMs = 2200) {
     const t = setTimeout(() => setToast(null), autoHideMs);
     return () => clearTimeout(t);
   }, [toast, autoHideMs]);
+
   const show = (msg: string, type: ToastType) => setToast({ msg, type });
+
   const element = toast ? (
     <div
       role="alert"
@@ -51,15 +53,17 @@ function useInlineToast(autoHideMs = 2200) {
           cursor: "pointer",
           fontWeight: 700,
         }}
+        aria-label="Close"
       >
         ×
       </button>
     </div>
   ) : null;
+
   return { show, element };
 }
 
-// backend shapes
+// ---------------- Backend shapes ----------------
 type BackendUserNameStatus = {
   id: number;
   first_name: string;
@@ -69,10 +73,43 @@ type BackendUserNameStatus = {
 type BackendUsersList = { users: BackendUserNameStatus[] };
 type BackendMyStatus = BackendUserNameStatus;
 
-const toStatus = (s: string | null | undefined): Status => {
-  const norm = (s ?? "").toString();
-  return (ALL_STATUSES as readonly string[]).includes(norm) ? (norm as Status) : ("Working" as Status);
+// ---------------- Status canonicalization + labels ----------------
+type Canonical = "Working" | "WorkingRemotely" | "OnVacation" | "BusinessTrip";
+
+// Map **any** backend/label variant → canonical
+const toCanonical = (s: string | null | undefined): Canonical => {
+  const raw = (s ?? "").toString().trim();
+
+  const exact: Record<string, Canonical> = {
+    Working: "Working",
+    WorkingRemotely: "WorkingRemotely",
+    OnVacation: "OnVacation",
+    BuissnessTrip: "BusinessTrip", // backend typo
+    BusinessTrip: "BusinessTrip",
+  };
+  if (raw in exact) return exact[raw as keyof typeof exact];
+
+  const key = raw.toLowerCase().replace(/[\s\-_]/g, "");
+  const tolerant: Record<string, Canonical> = {
+    working: "Working",
+    workingremotely: "WorkingRemotely",
+    onvacation: "OnVacation",
+    buissnesstrip: "BusinessTrip",
+    businesstrip: "BusinessTrip",
+  };
+  return tolerant[key] ?? "Working";
 };
+
+// Labels for display (with spaces). Use these **only** when showing text.
+const STATUS_LABEL: Record<Canonical, string> = {
+  Working: "Working",
+  WorkingRemotely: "Working Remotely",
+  OnVacation: "On Vacation",
+  BusinessTrip: "Business Trip",
+};
+
+const toStatus = (s: string | null | undefined): Status =>
+  toCanonical(s) as Status;
 
 const mapUser = (u: BackendUserNameStatus): User => ({
   id: u.id,
@@ -80,7 +117,7 @@ const mapUser = (u: BackendUserNameStatus): User => ({
   lastName: u.last_name,
   email: "",
   password: "",
-  status: toStatus(u.status),
+  status: toStatus(u.status), // stored canonical for logic
 });
 
 type SortBy = "name" | "status";
@@ -99,7 +136,10 @@ export const StatusesContainer: React.FC<{
   const [meStatus, setMeStatus] = useState<Status>("Working" as Status);
   const [search, setSearch] = useState("");
   const [statusFilters, setStatusFilters] = useState<Status[]>(
-    [...ALL_STATUSES] as Status[]
+    // normalize ALL_STATUSES (labels) → canonical values
+    ([...ALL_STATUSES] as string[]).map((s) =>
+      toStatus(s.replace(/\s+/g, ""))
+    ) as Status[]
   );
   const [sortBy, setSortBy] = useState<SortBy>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -121,8 +161,6 @@ export const StatusesContainer: React.FC<{
     const id = setInterval(() => setClock(fmt()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  const currentFull = userName.trim().toLowerCase();
 
   // my status
   useEffect(() => {
@@ -179,7 +217,7 @@ export const StatusesContainer: React.FC<{
         }
 
         const data: BackendUsersList = await res.json();
-        setUsersRaw(data.users.map(mapUser));
+        setUsersRaw(data.users.map(mapUser)); // user.status is canonical
       } catch {
         showRef.current("Network error. Please try again.", "error");
       }
@@ -209,16 +247,19 @@ export const StatusesContainer: React.FC<{
   // update my status
   const onChangeMyStatus = useCallback(
     async (next: Status) => {
-      if (next === meStatus) return;
+      // `next` may arrive canonical already
+      const canonNext = toStatus(next);
+      if (canonNext === meStatus) return;
+
       const prev = meStatus;
-      setMeStatus(next);
+      setMeStatus(canonNext);
 
       try {
         const res = await fetch(`${API_URL}/user_statuses/update_user_status?user_id=${currentUserId}`, {
           method: "PUT",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: next }),
+          body: JSON.stringify({ status: canonNext }),
         });
 
         if (!res.ok) {
@@ -232,11 +273,9 @@ export const StatusesContainer: React.FC<{
           return;
         }
 
+        // update by ID (not by name)
         setUsersRaw((prevUsers) =>
-          prevUsers.map((u) => {
-            const full = `${u.firstName} ${u.lastName}`.trim().toLowerCase();
-            return full === currentFull ? { ...u, status: next } : u;
-          })
+          prevUsers.map((u) => (u.id === currentUserId ? { ...u, status: canonNext } : u))
         );
         showRef.current("Status updated", "success");
       } catch {
@@ -244,35 +283,49 @@ export const StatusesContainer: React.FC<{
         showRef.current("Network error. Please try again.", "error");
       }
     },
-    [meStatus, currentFull, currentUserId]
+    [meStatus, currentUserId]
   );
 
   // filter/sort (exclude me)
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let out = usersRaw.filter((u) => `${u.firstName} ${u.lastName}`.trim().toLowerCase() !== currentFull);
+    let out = usersRaw.filter((u) => u.id !== currentUserId);
 
     if (q) out = out.filter((u) => (`${u.firstName} ${u.lastName}`).toLowerCase().includes(q));
-    if (statusFilters.length > 0) out = out.filter((u) => statusFilters.includes(u.status));
+
+    if (statusFilters.length > 0) {
+      out = out.filter((u) => statusFilters.includes(u.status)); // both sides canonical
+    }
 
     out = [...out].sort((a, b) => {
-      const aName = `${a.firstName} ${a.lastName}`.toLowerCase();
-      const bName = `${b.firstName} ${b.lastName}`.toLowerCase();
-      const cmp = sortBy === "name" ? aName.localeCompare(bName) : a.status.localeCompare(b.status);
-      return sortDir === "asc" ? cmp : -cmp;
+      if (sortBy === "name") {
+        const aName = `${a.firstName} ${a.lastName}`.toLowerCase();
+        const bName = `${b.firstName} ${b.lastName}`.toLowerCase();
+        const cmp = aName.localeCompare(bName);
+        return sortDir === "asc" ? cmp : -cmp;
+      } else {
+        const cmp = a.status.localeCompare(b.status);
+        return sortDir === "asc" ? cmp : -cmp;
+      }
     });
 
     return out;
-  }, [usersRaw, currentFull, search, statusFilters, sortBy, sortDir]);
+  }, [usersRaw, currentUserId, search, statusFilters, sortBy, sortDir]);
 
-  const toggleFilter = (s: Status) =>
-    setStatusFilters((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  // normalize what comes from child (it may pass labels with spaces)
+  const toggleFilter = (s: Status) => {
+    const canon = toStatus(s);
+    setStatusFilters((prev) =>
+      prev.includes(canon) ? prev.filter((x) => x !== canon) : [...prev, canon]
+    );
+  };
 
   const onToggleSort = (col: SortBy) => {
     if (col === sortBy) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortBy(col); setSortDir("asc"); }
   };
 
+  // --------------- Render ----------------
   return (
     <>
       {/* centered clock on top */}
@@ -280,7 +333,7 @@ export const StatusesContainer: React.FC<{
         style={{
           padding: "0 6px",
           background: "transparent",
-          color: "rgba(11,37,55,0.85)", // navy-ish to fit palette
+          color: "rgba(11,37,55,0.85)",
           fontWeight: 800,
           letterSpacing: 0.5,
           fontSize: 24,

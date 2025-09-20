@@ -1,12 +1,6 @@
 import React from "react";
 import { styles, theme } from "../../../assets/styles/styles";
 
-/**
- * Uses your existing tokens:
- * - surfaces/inputs use the light-blue strokes from styles
- * - primary button uses your yellow accent (via styles.primaryBtn)
- * - title uses styles.title (navy)
- */
 
 export const LoginComponent: React.FC<{
   username: string;
