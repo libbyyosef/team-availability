@@ -1,4 +1,3 @@
-# models/user_status_model.py
 from __future__ import annotations
 
 from sqlalchemy import Column, Text, ForeignKey, DateTime

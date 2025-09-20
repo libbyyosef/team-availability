@@ -1,4 +1,3 @@
-# models/user_model.py
 from __future__ import annotations
 
 from sqlalchemy import Column, Text
@@ -13,7 +12,7 @@ class User(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     email = Column(Text, nullable=False, unique=True, index=True)
-    password = Column(Text, nullable=False)  # store HASH, not raw
+    password = Column(Text, nullable=False)  # store HASH
     first_name = Column(Text, nullable=False)
     last_name = Column(Text, nullable=False)
 

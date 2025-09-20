@@ -1,25 +1,22 @@
-# server/scripts/create_db.py
 from __future__ import annotations
 from pathlib import Path
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-import json, time, bcrypt
+import json, time
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-# engine + session
 from ..sql_db.db import engine, SessionLocal
 
-# your CRUD
 from ..crud.user_crud import create_user
 from ..crud.user_status_crud import upsert_user_status
 
-# schemas / model (adjust paths if needed)
 from ..schemas.user_schema import UserCreate
 from ..schemas.user_statuses_schema import UserStatusCreate
 from ..models.user_model import User
+from ..routers.hashing import hash_password  
 
 DEFAULT_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "sql_db" / "schema.sql"
 
@@ -38,7 +35,6 @@ def naive_statement_count(sql_text: str) -> int:
 def log_json(metrics: dict) -> None:
     print(json.dumps(metrics, ensure_ascii=False))
 
-# -------- seed data (NO password fields here) --------
 USERS = [
     {"first_name": "Libby",  "last_name": "Yosef",    "email": "libby.yosef@pubplus.com",    "status": "Working"},
     {"first_name": "Avi",    "last_name": "Cohen",    "email": "avi.cohen@pubplus.com",      "status": "Working"},
@@ -51,20 +47,15 @@ USERS = [
 ]
 
 def _make_initial_password(first_name: str) -> str:
-    # per your request: "user name123!?" → we use the first name token
+    # your convention: FirstName123!?
     return f"{first_name}123!?"
-
-def _hash_pw(plain: str) -> str:
-    # create_user expects an already-hashed password
-    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def seed_users_and_statuses(db: Session) -> None:
     for u in USERS:
-        # derive & hash password
         derived_pw = _make_initial_password(u["first_name"])
         user_create = UserCreate(
             email=u["email"],
-            password=_hash_pw(derived_pw),   # pass HASH to create_user
+            password=hash_password(derived_pw),  # <-- hash here (bcrypt)
             first_name=u["first_name"],
             last_name=u["last_name"],
         )
@@ -74,7 +65,6 @@ def seed_users_and_statuses(db: Session) -> None:
             db.rollback()
             user = db.execute(select(User).where(User.email == u["email"])).scalar_one()
 
-        # upsert status
         status_create = UserStatusCreate(user_id=user.id, status=u["status"])
         upsert_user_status(db, status_create)
 
@@ -89,7 +79,6 @@ def main() -> None:
         sql_text = read_sql(DEFAULT_SCHEMA_PATH)
         stmt_count = naive_statement_count(sql_text)
         apply_schema(sql_text)
-        # seed via CRUD
         with SessionLocal() as db:
             seed_users_and_statuses(db)
         success = 1

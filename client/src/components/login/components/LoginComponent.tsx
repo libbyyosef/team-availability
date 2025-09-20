@@ -30,34 +30,34 @@ export const LoginComponent: React.FC<{
       }}
     >
       {/* Row 1: Title at the top */}
-     <div
-  style={{
-    display: "flex",
-    justifyContent: "center",
-    // push the title down toward the card while keeping the card as-is
-    paddingTop: "clamp(48px, 12vh, 120px)",
-  }}
->
-  <h1
-    style={{
-      ...styles.title,
-      margin: 0,
-      fontSize: 44,
-      lineHeight: 1.15,
-      letterSpacing: 0.3,
-      textAlign: "center",
-    }}
-  >
-    Welcome to MyWorkStatus
-  </h1>
-</div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          // push the title down toward the card while keeping the card as-is
+          paddingTop: "clamp(48px, 12vh, 120px)",
+        }}
+      >
+        <h1
+          style={{
+            ...styles.title,
+            margin: 0,
+            fontSize: 44,
+            lineHeight: 1.15,
+            letterSpacing: 0.3,
+            textAlign: "center",
+          }}
+        >
+          Welcome to MyWorkStatus
+        </h1>
+      </div>
 
       {/* Row 2: Card centered within the remaining space */}
       <div
         style={{
           display: "grid",
           placeItems: "center",
-          alignItems:"start",
+          alignItems: "start",
           padding: "80px 0 16px",
           // ensures inner content doesn't cause page scroll
           overflow: "hidden",
@@ -73,6 +73,7 @@ export const LoginComponent: React.FC<{
                 placeholder="please enter your email"
                 value={username}
                 onChange={(e) => onChangeUser(e.target.value)}
+                autoComplete="username"
               />
             </div>
 
@@ -84,6 +85,7 @@ export const LoginComponent: React.FC<{
                 placeholder="please enter your password"
                 value={password}
                 onChange={(e) => onChangePass(e.target.value)}
+                autoComplete="current-password"
               />
             </div>
 

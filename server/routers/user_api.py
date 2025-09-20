@@ -1,11 +1,10 @@
-# api/routes/users.py
 from __future__ import annotations
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from server.routers.responses import load_responses
+from routers.responses import load_responses
 from sql_db.db import get_db
 
 
@@ -42,7 +41,6 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
     Create a user. **password** must be a HASH (bcrypt/argon2).
     Email uniqueness is case-sensitive (DB-level).
     """
-    # naive conflict handling
     if user_crud.get_user_by_email(db, str(payload.email)):
         raise HTTPException(status_code=409, detail="Email already exists")
     return user_crud.create_user(db, payload)
