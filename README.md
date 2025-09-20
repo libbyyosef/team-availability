@@ -28,14 +28,14 @@ Seeded display names + statuses:
 
 | ID | First Name | Last Name  | Email                        | Status          |
 |----|------------|------------|------------------------------|-----------------|
-| 1  | Libby      | Yosef      | libby.yosef@pubplus.com      | working         |
-| 2  | Avi        | Cohen      | avi.cohen@pubplus.com        | working         |
-| 3  | Diana      | Tesler     | diana.tesler@pubplus.com     | on_vacation     |
-| 4  | Yossi      | Morris     | yossi.morris@pubplus.com     | working         |
-| 5  | Danny      | Rodin      | danny.rodin@pubplus.com      | business_trip   |
-| 6  | Efi        | Shmidt     | efi.shmidt@pubplus.com       | on_vacation     |
-| 7  | Inbal      | Goldfarb   | inbal.goldfarb@pubplus.com   | working         |
-| 8  | Dolev      | Aufleger   | dolev.aufleger@pubplus.com   | working         |
+| 1  | Libby      | Yosef      | libby.yosef@pubplus.com      | Working         |
+| 2  | Avi        | Cohen      | avi.cohen@pubplus.com        | Working         |
+| 3  | Diana      | Tesler     | diana.tesler@pubplus.com     | OnVacation     |
+| 4  | Yossi      | Morris     | yossi.morris@pubplus.com     | Working         |
+| 5  | Danny      | Rodin      | danny.rodin@pubplus.com      | BusinessTrip   |
+| 6  | Efi        | Shmidt     | efi.shmidt@pubplus.com       | OnVacation     |
+| 7  | Inbal      | Goldfarb   | inbal.goldfarb@pubplus.com   | Working         |
+| 8  | Dolev      | Aufleger   | dolev.aufleger@pubplus.com   | Working         |
 
 ---
 
