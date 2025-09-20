@@ -39,36 +39,6 @@ Seeded display names + statuses:
 
 ---
 
-## Quick Start with Docker
-
-> Requires **Docker** and **docker-compose** (or `docker compose`).
-
-```bash
-git clone https://github.com/libbyyosef/team-availability.git
-cd team-availability
-docker-compose up --build
-```
-
-- **Web UI** → http://localhost:8080  
-- **API** → http://localhost:8000  
-- **DB** → localhost:5432 (service name inside compose: `db`)
-
-To stop & clean volumes:
-
-```bash
-docker-compose down -v
-```
-
-### What the stack does on startup
-
-1. **PostgreSQL** container starts and becomes healthy.  
-2. **Backend** waits for DB, then runs:
-   - `python server/scripts/create_db.py -s server/sql_db/schema.sql`  
-     (Creates tables, seeds the demo users + statuses, idempotent.)
-3. **Backend** launches FastAPI (Uvicorn) on port 8000.  
-4. **Frontend** is built and served by Nginx on port 8080.
-
----
 
 ## Local Development (without Docker)
 
@@ -219,3 +189,35 @@ repo/
 ### Infra
 - PostgreSQL
 - Docker & docker-compose
+
+
+## Quick Start with Docker
+
+> Requires **Docker** and **docker-compose** (or `docker compose`).
+
+```bash
+git clone https://github.com/libbyyosef/team-availability.git
+cd team-availability
+docker-compose up --build
+```
+
+- **Web UI** → http://localhost:8080  
+- **API** → http://localhost:8000  
+- **DB** → localhost:5432 (service name inside compose: `db`)
+
+To stop & clean volumes:
+
+```bash
+docker-compose down -v
+```
+
+### What the stack does on startup
+
+1. **PostgreSQL** container starts and becomes healthy.  
+2. **Backend** waits for DB, then runs:
+   - `python server/scripts/create_db.py -s server/sql_db/schema.sql`  
+     (Creates tables, seeds the demo users + statuses, idempotent.)
+3. **Backend** launches FastAPI (Uvicorn) on port 8000.  
+4. **Frontend** is built and served by Nginx on port 8080.
+
+---
