@@ -1,4 +1,3 @@
-# api/routes/user_statuses.py
 from __future__ import annotations
 
 from typing import List
@@ -47,7 +46,6 @@ def upsert_user_status(payload: UserStatusCreate, db: Session = Depends(get_db))
 
 
 # <------------------ READ -------------------->
-# ---------- 1) Get a specific user's status ----------
 @router.get(
     "/get_user_status",
     response_model=UserStatusPublic,
