@@ -1,0 +1,83 @@
+# user_status_responses.yaml
+
+upsert_status_201:
+  description: User status created or updated successfully.
+  content:
+    application/json:
+      example:
+        user_id: 123
+        status: "working"
+        updated_at: "2025-09-20T12:34:56Z"
+
+upsert_status_400:
+  description: Invalid payload (e.g., empty/unsupported status).
+  content:
+    application/json:
+      example:
+        detail: "Invalid status value"
+
+upsert_status_404:
+  description: Related user not found (when upserting requires a valid user).
+  content:
+    application/json:
+      example:
+        detail: "User not found"
+
+get_status_200:
+  description: User status fetched successfully.
+  content:
+    application/json:
+      example:
+        user_id: 123
+        status: "working_remotely"
+        updated_at: "2025-09-20T12:34:56Z"
+
+get_status_404:
+  description: Status for the given user_id does not exist.
+  content:
+    application/json:
+      example:
+        detail: "Status not found"
+
+list_by_status_200:
+  description: User statuses listed successfully by status value.
+  content:
+    application/json:
+      example:
+        items:
+          - user_id: 101
+            status: "on_vacation"
+            updated_at: "2025-09-18T09:10:11Z"
+          - user_id: 204
+            status: "on_vacation"
+            updated_at: "2025-09-19T16:22:33Z"
+
+update_status_200:
+  description: Existing user status updated successfully.
+  content:
+    application/json:
+      example:
+        user_id: 321
+        status: "business_trip"
+        updated_at: "2025-09-20T13:00:00Z"
+
+update_status_404:
+  description: Status to update was not found for the given user_id.
+  content:
+    application/json:
+      example:
+        detail: "Status not found"
+
+delete_status_200:
+  description: User status deleted successfully.
+  content:
+    application/json:
+      example:
+        detail: "Status deleted"
+
+delete_status_404:
+  description: Status to delete was not found for the given user_id.
+  content:
+    application/json:
+      example:
+        detail: "Status not found"

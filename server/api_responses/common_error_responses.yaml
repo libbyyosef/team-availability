@@ -1,0 +1,15 @@
+422:
+  description: Validation Error - Invalid request body or parameters
+  content:
+    application/json:
+      example:
+        detail:
+          - loc: ["body", "field_name"]
+            msg: value is not valid
+            type: value_error
+500:
+  description: Internal Server Error
+  content:
+    application/json:
+      example:
+        detail: Internal server error

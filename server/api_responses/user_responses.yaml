@@ -1,0 +1,98 @@
+# user_responses.yaml
+
+create_user_201:
+  description: User created successfully.
+  content:
+    application/json:
+      example:
+        id: 123
+        email: "User@Example.com"
+        first_name: "Alice"
+        last_name: "Danvers"
+
+create_user_400:
+  description: Invalid input payload (missing/invalid fields).
+  content:
+    application/json:
+      example:
+        detail: "Invalid user data"
+
+create_user_409:
+  description: Email already exists (case-sensitive).
+  content:
+    application/json:
+      example:
+        detail: "Email already exists"
+
+get_user_200:
+  description: User retrieved successfully.
+  content:
+    application/json:
+      example:
+        id: 123
+        email: "User@Example.com"
+        first_name: "Alice"
+        last_name: "Danvers"
+
+get_user_404:
+  description: User not found.
+  content:
+    application/json:
+      example:
+        detail: "User not found"
+
+list_users_200:
+  description: Users listed successfully.
+  content:
+    application/json:
+      example:
+        users:
+          - id: 101
+            email: "User1@Example.com"
+            first_name: "Dana"
+            last_name: "Levi"
+          - id: 102
+            email: "User2@Example.com"
+            first_name: "Noam"
+            last_name: "Cohen"
+
+get_user_by_email_200:
+  description: User retrieved successfully by email (case-sensitive).
+  content:
+    application/json:
+      example:
+        id: 555
+        email: "User@Example.com"
+        first_name: "Ruth"
+        last_name: "Peretz"
+
+get_user_by_email_404:
+  description: User with given email was not found.
+  content:
+    application/json:
+      example:
+        detail: "User not found"
+
+update_user_200:
+  description: User updated successfully.
+  content:
+    application/json:
+      example:
+        id: 123
+        email: "User@Example.com"
+        first_name: "Alice-Updated"
+        last_name: "Danvers"
+
+update_user_400:
+  description: Invalid update payload (e.g., empty names).
+  content:
+    application/json:
+      example:
+        detail: "Invalid update data"
+
+update_user_404:
+  description: User to update was not found.
+  content:
+    application/json:
+      example:
+        detail: "User not found"
