@@ -3,40 +3,26 @@ import { styles, theme } from "../../../assets/styles/styles";
 import { ALL_STATUSES, fullName, Status } from "../../../assets/types/types";
 import type { User } from "../../../assets/types/types";
 
-const statusPhrase = (s: Status) => {
-  switch (s) {
-    case Status.Working:
-      return "working";
-    case Status.WorkingRemotely:
-      return "working remotely";
-    case Status.OnVacation:
-      return "on vacation";
-    case Status.BusinessTrip:
-      return "on business trip";
-    default:
-      return String(s).toLowerCase();
-  }
-};
-
+/**
+ * Keeps the light-blue table strokes (#D8E4F5), navy text, and yellow accents.
+ */
 export const StatusesComponent: React.FC<{
-  userName: string; // full name for greeting
+  userName: string;
   meStatus: Status;
-  setMeStatus: (s: Status) => void;
+  onChangeMyStatus: (next: Status) => void;
   search: string;
   setSearch: (v: string) => void;
   statusFilters: Status[];
   toggleFilter: (s: Status) => void;
   users: User[];
   onLogout: () => void;
-
-  // sorting
   sortBy: "name" | "status";
   sortDir: "asc" | "desc";
   onToggleSort: (col: "name" | "status") => void;
 }> = ({
   userName,
   meStatus,
-  setMeStatus,
+  onChangeMyStatus,
   search,
   setSearch,
   statusFilters,
@@ -47,9 +33,24 @@ export const StatusesComponent: React.FC<{
   sortDir,
   onToggleSort,
 }) => {
+  const statusPhrase = (s: Status) => {
+    switch (s) {
+      case Status.Working:
+        return "working";
+      case Status.WorkingRemotely:
+        return "working remotely";
+      case Status.OnVacation:
+        return "on vacation";
+      case Status.BusinessTrip:
+        return "on business trip";
+      default:
+        return String(s).toLowerCase();
+    }
+  };
+
   const header = `Hello, ${userName}. You are ${statusPhrase(meStatus)}`;
 
-  // inline dropdown state/logic
+  // filter dropdown
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -77,53 +78,63 @@ export const StatusesComponent: React.FC<{
   };
 
   return (
-    <div style={styles.dashboardWrap}>
-      {/* Header with Logout */}
-     <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 8,
-    // don't force nowrap on the container; let the H2 handle truncation
-  }}
->
-  <h2
-    style={{
-      ...styles.title,
-      marginBottom: 0,
-      textAlign: "left",     // override any center text
-      flex: "1 1 auto",      // allow to shrink
-      minWidth: 0,           // CRITICAL for ellipsis inside flex
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-    }}
-    title={header}
-  >
-    {header}
-  </h2>
+    <div
+      style={{
+        ...styles.dashboardWrap,
+        // soft blue background for the whole area
+        background:
+          "linear-gradient(180deg, rgba(216,228,245,0.24) 0%, rgba(216,228,245,0.08) 100%)",
+        borderRadius: 16,
+        padding: 16,
+      }}
+    >
+      {/* Header + Logout */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 8,
+        }}
+      >
+        <h2
+          style={{
+            ...styles.title,
+            marginBottom: 0,
+            textAlign: "left",
+            flex: "1 1 auto",
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            // yellow accent bar, subtle
+            boxShadow: `inset 0 -0.35em 0 ${theme.yellow}33`,
+          }}
+          title={header}
+        >
+          {header}
+        </h2>
 
-  <button
-    onClick={onLogout}
-    style={{
-      borderRadius: 10,
-      padding: "8px 14px",
-      background: theme.yellow,
-      color: theme.navy,
-      border: `1px solid ${theme.yellow}`,
-      fontWeight: 700,
-      cursor: "pointer",
-      boxShadow: "0 4px 10px rgba(242,195,53,0.35)",
-      flex: "0 0 auto",      // do not let it grow/shrink
-      whiteSpace: "nowrap",  // keep the word "Logout" intact
-    }}
-  >
-    Logout
+        <button
+          onClick={onLogout}
+          style={{
+            borderRadius: 10,
+            padding: "8px 14px",
+            background: theme.yellow,
+            color: theme.navy,
+            border: `1px solid ${theme.yellow}`,
+            fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 4px 10px rgba(242,195,53,0.35)",
+            flex: "0 0 auto",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Logout
         </button>
       </div>
 
-      {/* INLINE status updater: label + select in one row */}
+      {/* My status updater */}
       <div
         style={{
           display: "flex",
@@ -145,7 +156,7 @@ export const StatusesComponent: React.FC<{
         <select
           style={{ ...styles.select, minWidth: 220 }}
           value={meStatus}
-          onChange={(e) => setMeStatus(e.target.value as Status)}
+          onChange={(e) => onChangeMyStatus(e.target.value as Status)}
         >
           {ALL_STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -158,9 +169,9 @@ export const StatusesComponent: React.FC<{
       <section style={{ marginTop: 16 }}>
         <h3 style={styles.sectionTitle}>Employees</h3>
 
-        {/* Search (left) + Filter dropdown (right) */}
+        {/* Search + Filter */}
         <div style={styles.filtersRow}>
-          {/* Left: search with icon */}
+          {/* Search */}
           <div style={styles.searchGroup}>
             <span style={styles.searchIcon} aria-hidden>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
@@ -173,35 +184,37 @@ export const StatusesComponent: React.FC<{
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
-                width: 260, // same width
+                width: 260,
                 background: "#fff",
-                border: "1px solid #D8E4F5", // same border
-                borderRadius: 10, // same radius
+                border: "1px solid #D8E4F5",
+                borderRadius: 10,
                 color: "#0B2537",
-                padding: "10px 12px", // same padding
+                padding: "10px 12px",
               }}
             />
           </div>
 
-          {/* Right: dropdown only */}
+          {/* Filter */}
           <div ref={wrapRef} style={{ position: "relative", width: 260 }}>
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-haspopup="listbox"
               style={{
-                width: "100%", // fills the 260px wrapper
+                width: "100%",
                 background: "#fff",
-                border: "1px solid #D8E4F5", // same border
-                borderRadius: 10, // same radius
+                border: "1px solid #D8E4F5",
+                borderRadius: 10,
                 color: statusFilters.length ? "#0B2537" : "#4B6172",
-                padding: "10px 12px", // same padding
+                padding: "10px 12px",
                 cursor: "pointer",
                 fontWeight: 400,
                 textAlign: "left",
               }}
             >
-              {statusFilters.length ? `Selected (${statusFilters.length})` : "Filter by status..."}
+              {statusFilters.length === ALL_STATUSES.length
+                ? "All statuses"
+                : `Selected (${statusFilters.length})`}
             </button>
 
             {open && (
@@ -219,7 +232,6 @@ export const StatusesComponent: React.FC<{
                   padding: 10,
                 }}
               >
-                {/* local style for grey placeholder */}
                 <style
                   dangerouslySetInnerHTML={{
                     __html: `.status-filter-search::placeholder{ color:#9CA3AF; opacity:1 }`,
@@ -245,11 +257,41 @@ export const StatusesComponent: React.FC<{
                 />
 
                 <div style={{ maxHeight: 200, overflowY: "auto", paddingRight: 4 }}>
-                  {filteredStatuses.length === 0 && (
+                  {ALL_STATUSES.length === 0 && (
                     <div style={{ color: "#4B6172", fontSize: 13, padding: "6px 2px" }}>
-                      No statuses match.
+                      No statuses.
                     </div>
                   )}
+
+                  {/* “All” toggle */}
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      color: "#0B2537",
+                      fontSize: 14,
+                      padding: "6px 4px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      fontWeight: 700,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={statusFilters.length === ALL_STATUSES.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          ALL_STATUSES.forEach((s) => {
+                            if (!statusFilters.includes(s as Status)) toggleFilter(s as Status);
+                          });
+                        } else {
+                          [...statusFilters].forEach((s) => toggleFilter(s));
+                        }
+                      }}
+                    />
+                    (All)
+                  </label>
 
                   {filteredStatuses.map((s) => (
                     <label
@@ -267,34 +309,12 @@ export const StatusesComponent: React.FC<{
                     >
                       <input
                         type="checkbox"
-                        checked={statusFilters.includes(s)}
-                        onChange={() => toggleFilter(s)}
+                        checked={statusFilters.includes(s as Status)}
+                        onChange={() => toggleFilter(s as Status)}
                       />
                       {s}
                     </label>
                   ))}
-                </div>
-
-                <div style={{ marginTop: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      statusFilters.forEach((s) => toggleFilter(s));
-                    }}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      border: 0,
-                      background: "#ef4444",
-                      color: "white",
-                      borderRadius: 10,
-                      padding: "10px 12px",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Clear
-                  </button>
                 </div>
               </div>
             )}

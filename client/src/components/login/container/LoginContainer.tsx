@@ -1,51 +1,46 @@
-// components/login/container/LoginContainer.tsx
 import React, { useCallback, useState } from "react";
-import { useToast } from "@chakra-ui/toast";          // v3 hook (works with fallback below)
+import { useToast } from "@chakra-ui/toast";
 import { LoginComponent } from "../components/LoginComponent";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const LOGIN_TIMEOUT_MS = 8000; // show error if backend doesn't respond in time
+const LOGIN_TIMEOUT_MS = 8000;
 
-export const LoginContainer: React.FC<{ onAuthed: (fullName: string) => void }> = ({ onAuthed }) => {
+export const LoginContainer: React.FC<{
+  onAuthed: (fullName: string, userId: number) => void;
+}> = ({ onAuthed }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);      // prevent double submits
+  const [loading, setLoading] = useState(false);
   const toast = useToast();
 
-  // Works with both Chakra v3 (toast.create) and classic API (toast({...}))
   const notify = useCallback(
     (title: string, kind: "success" | "error" | "info" | "warning", description?: string) => {
       try {
-        // @ts-ignore - runtime feature detection for v3 API
-        if (typeof (toast as any).create === "function") {
-          // @ts-ignore
-          (toast as any).create({
+        const anyToast = toast as any;
+        if (typeof anyToast.create === "function") {
+          anyToast.create({
             title,
             description,
-            type: kind,            // v3
+            type: kind, // Chakra v3
             duration: 2500,
             closable: true,
             placement: "top-end",
           });
         } else {
-          // Classic API shape
-          (toast as any)({
+          anyToast({
             title,
             description,
-            status: kind,
+            status: kind, // classic
             duration: 2500,
             isClosable: true,
             position: "top-right",
           });
         }
-      } catch {
-        // swallow toast errors silently
-      }
+      } catch {}
     },
     [toast]
   );
 
-  // Extract a useful message from FastAPI error responses
   const readErrorMessage = async (res: Response): Promise<string> => {
     const ct = res.headers.get("content-type") || "";
     if (!ct.includes("application/json")) return `Login failed (${res.status}). Please try again.`;
@@ -55,14 +50,12 @@ export const LoginContainer: React.FC<{ onAuthed: (fullName: string) => void }> 
       if (Array.isArray(data?.detail) && data.detail.length && typeof data.detail[0]?.msg === "string") {
         return data.detail[0].msg;
       }
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     return `Login failed (${res.status}). Please try again.`;
   };
 
   const handleLogin = useCallback(() => {
-    if (loading) return; // prevent double-submits while in flight
+    if (loading) return;
 
     (async () => {
       const email = username.trim().toLowerCase();
@@ -74,15 +67,13 @@ export const LoginContainer: React.FC<{ onAuthed: (fullName: string) => void }> 
       }
 
       setLoading(true);
-
-      // Add a timeout to fail fast if the server doesn't respond
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), LOGIN_TIMEOUT_MS);
 
       try {
         const res = await fetch(`${API_URL}/auth/login`, {
           method: "POST",
-          credentials: "include",                // send/receive cookie
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password: pass }),
           signal: ctrl.signal,
@@ -109,15 +100,30 @@ export const LoginContainer: React.FC<{ onAuthed: (fullName: string) => void }> 
           return;
         }
 
-        const user = await res.json(); // { first_name, last_name, ... }
+        const user = await res.json(); // { id, first_name, last_name, ... }
+
+        if (!user.id || !user.first_name || !user.last_name) {
+          notify("Login error", "error", "Invalid response from server.");
+          return;
+        }
+
+        // warm cookie
+        try {
+          await fetch(`${API_URL}/users/list_users_with_statuses`, {
+            credentials: "include",
+            cache: "no-store",
+          });
+          await new Promise((r) => setTimeout(r, 50));
+        } catch {}
+
         notify("Logged in", "success");
-        onAuthed(`${user.first_name} ${user.last_name}`);
+        onAuthed(`${user.first_name} ${user.last_name}`, user.id);
       } catch (err: any) {
         clearTimeout(timer);
         if (err?.name === "AbortError") {
-          notify("Request timed out", "error", "The server didn’t respond. Please try again.");
+          notify("Request timed out", "error", "The server didn't respond. Please try again.");
         } else {
-          notify("Network error", "error", "Couldn’t reach the server. Please try again.");
+          notify("Network error", "error", "Couldn't reach the server. Please try again.");
         }
       } finally {
         setLoading(false);

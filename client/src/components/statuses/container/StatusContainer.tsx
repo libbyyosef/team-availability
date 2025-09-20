@@ -1,16 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Status, User } from "../../../assets/types/types";
 import { ALL_STATUSES } from "../../../assets/types/types";
 import { StatusesComponent } from "../components/StatusComponent";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const POLL_MS = 180_000; // 3 minutes
+const POLL_MS = 180_000;
 
-// ------ Minimal inline toast (unchanged) ------
+// lightweight inline toast (keeps UI minimal; colors come from inline)
 type ToastType = "success" | "error" | "info";
-function useToast(autoHideMs = 2200) {
+function useInlineToast(autoHideMs = 2200) {
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
-  React.useEffect(() => {
+  useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), autoHideMs);
     return () => clearTimeout(t);
@@ -24,7 +24,9 @@ function useToast(autoHideMs = 2200) {
         top: 16,
         right: 16,
         zIndex: 9999,
-        background: toast.type === "success" ? "#16a34a" : toast.type === "error" ? "#ef4444" : "#2563eb",
+        background:
+          toast.type === "success" ? "#16a34a" :
+          toast.type === "error" ? "#ef4444" : "#2563eb",
         color: "white",
         padding: "10px 14px",
         borderRadius: 10,
@@ -57,7 +59,7 @@ function useToast(autoHideMs = 2200) {
   return { show, element };
 }
 
-// ------ Backend shapes ------
+// backend shapes
 type BackendUserNameStatus = {
   id: number;
   first_name: string;
@@ -67,11 +69,11 @@ type BackendUserNameStatus = {
 type BackendUsersList = { users: BackendUserNameStatus[] };
 type BackendMyStatus = BackendUserNameStatus;
 
-// ------ Helpers ------
 const toStatus = (s: string | null | undefined): Status => {
   const norm = (s ?? "").toString();
   return (ALL_STATUSES as readonly string[]).includes(norm) ? (norm as Status) : ("Working" as Status);
 };
+
 const mapUser = (u: BackendUserNameStatus): User => ({
   id: u.id,
   firstName: u.first_name,
@@ -87,26 +89,25 @@ type SortDir = "asc" | "desc";
 export const StatusesContainer: React.FC<{
   userName: string;
   onLogout: () => void;
-}> = ({ userName, onLogout }) => {
-  const { show, element: toast } = useToast();
+  currentUserId: number;
+}> = ({ userName, onLogout, currentUserId }) => {
+  const { show, element: toast } = useInlineToast();
   const showRef = useRef(show);
-  useEffect(() => {
-    showRef.current = show;
-  }, [show]);
+  useEffect(() => { showRef.current = show; }, [show]);
 
   const [usersRaw, setUsersRaw] = useState<User[]>([]);
   const [meStatus, setMeStatus] = useState<Status>("Working" as Status);
   const [search, setSearch] = useState("");
-  const [statusFilters, setStatusFilters] = useState<Status[]>([]);
+  const [statusFilters, setStatusFilters] = useState<Status[]>(
+    [...ALL_STATUSES] as Status[]
+  );
   const [sortBy, setSortBy] = useState<SortBy>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  // success toast after login
-  useEffect(() => {
-    showRef.current("you logged in succesfully", "success");
-  }, []);
+  // greet
+  useEffect(() => { showRef.current("You logged in successfully", "success"); }, []);
 
-  // Clock
+  // clock
   const [clock, setClock] = useState<string>("");
   useEffect(() => {
     const fmt = () =>
@@ -123,15 +124,16 @@ export const StatusesContainer: React.FC<{
 
   const currentFull = userName.trim().toLowerCase();
 
-  // Fetch "me" status once (on mount). Could also be polled if desired.
+  // my status
   useEffect(() => {
     let cancelled = false;
     const ctrl = new AbortController();
 
     (async () => {
       try {
-        const meRes = await fetch(`${API_URL}/users/me/status`, {
+        const meRes = await fetch(`${API_URL}/users/get_user_status?user_id=${currentUserId}`, {
           credentials: "include",
+          cache: "no-store",
           signal: ctrl.signal,
         });
         if (!meRes.ok) {
@@ -154,47 +156,47 @@ export const StatusesContainer: React.FC<{
       cancelled = true;
       ctrl.abort();
     };
-  }, [onLogout]);
+  }, [onLogout, currentUserId]);
 
-  // Function to fetch ALL users (stable)
-  const fetchAllUsers = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const res = await fetch(`${API_URL}/users/list_users_with_statuses`, {
-        credentials: "include",
-        signal,
-      });
-      
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          showRef.current("Session expired. Please log in again.", "error");
-          onLogout();
+  // fetch all
+  const fetchAllUsers = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const res = await fetch(`${API_URL}/users/list_users_with_statuses`, {
+          credentials: "include",
+          cache: "no-store",
+          signal,
+        });
+
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            showRef.current("Session expired. Please log in again.", "error");
+            onLogout();
+            return;
+          }
+          showRef.current(`Failed to load users (${res.status}).`, "error");
           return;
         }
-        showRef.current(`Failed to load users (${res.status}).`, "error");
-        return;
-      }
-      
-      const data: BackendUsersList = await res.json();
-      setUsersRaw(data.users.map(mapUser));
-    } catch {
-      showRef.current("Network error. Please try again.", "error");
-    }
-  }, [onLogout]);
 
-  // Initial load + poll every 3 minutes
+        const data: BackendUsersList = await res.json();
+        setUsersRaw(data.users.map(mapUser));
+      } catch {
+        showRef.current("Network error. Please try again.", "error");
+      }
+    },
+    [onLogout]
+  );
+
   useEffect(() => {
     let cancelled = false;
-
-    // immediate fetch
     const ctrl = new AbortController();
+
     fetchAllUsers(ctrl.signal);
 
-    // interval polling
     const id = setInterval(() => {
       if (cancelled) return;
       const c = new AbortController();
       fetchAllUsers(c.signal);
-      // optional: store controller to abort old polls if needed
     }, POLL_MS);
 
     return () => {
@@ -204,19 +206,54 @@ export const StatusesContainer: React.FC<{
     };
   }, [fetchAllUsers]);
 
-  // Client-side filter/sort (exclude current user from table)
+  // update my status
+  const onChangeMyStatus = useCallback(
+    async (next: Status) => {
+      if (next === meStatus) return;
+      const prev = meStatus;
+      setMeStatus(next);
+
+      try {
+        const res = await fetch(`${API_URL}/user_statuses/update_user_status?user_id=${currentUserId}`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: next }),
+        });
+
+        if (!res.ok) {
+          setMeStatus(prev);
+          let detail = "";
+          try {
+            const d = await res.json();
+            detail = typeof d?.detail === "string" ? d.detail : "";
+          } catch {}
+          showRef.current(detail || `Failed to update status (${res.status}).`, "error");
+          return;
+        }
+
+        setUsersRaw((prevUsers) =>
+          prevUsers.map((u) => {
+            const full = `${u.firstName} ${u.lastName}`.trim().toLowerCase();
+            return full === currentFull ? { ...u, status: next } : u;
+          })
+        );
+        showRef.current("Status updated", "success");
+      } catch {
+        setMeStatus(prev);
+        showRef.current("Network error. Please try again.", "error");
+      }
+    },
+    [meStatus, currentFull, currentUserId]
+  );
+
+  // filter/sort (exclude me)
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
-
     let out = usersRaw.filter((u) => `${u.firstName} ${u.lastName}`.trim().toLowerCase() !== currentFull);
 
-    if (q) {
-      out = out.filter((u) => (`${u.firstName} ${u.lastName}`).toLowerCase().includes(q));
-    }
-
-    if (statusFilters.length > 0) {
-      out = out.filter((u) => statusFilters.includes(u.status));
-    }
+    if (q) out = out.filter((u) => (`${u.firstName} ${u.lastName}`).toLowerCase().includes(q));
+    if (statusFilters.length > 0) out = out.filter((u) => statusFilters.includes(u.status));
 
     out = [...out].sort((a, b) => {
       const aName = `${a.firstName} ${a.lastName}`.toLowerCase();
@@ -232,22 +269,18 @@ export const StatusesContainer: React.FC<{
     setStatusFilters((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const onToggleSort = (col: SortBy) => {
-    if (col === sortBy) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(col);
-      setSortDir("asc");
-    }
+    if (col === sortBy) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortBy(col); setSortDir("asc"); }
   };
 
   return (
     <>
-      {/* Centered clock */}
+      {/* centered clock on top */}
       <div
         style={{
           padding: "0 6px",
           background: "transparent",
-          color: "rgba(255,255,255,0.92)",
+          color: "rgba(11,37,55,0.85)", // navy-ish to fit palette
           fontWeight: 800,
           letterSpacing: 0.5,
           fontSize: 24,
@@ -255,8 +288,7 @@ export const StatusesContainer: React.FC<{
           textAlign: "center",
           fontVariantNumeric: "tabular-nums",
           fontFeatureSettings: '"tnum"',
-          textShadow: "0 1px 2px rgba(0,0,0,0.25)",
-          pointerEvents: "auto",
+          textShadow: "0 1px 2px rgba(0,0,0,0.12)",
         }}
       >
         {clock}
@@ -265,7 +297,7 @@ export const StatusesContainer: React.FC<{
       <StatusesComponent
         userName={userName}
         meStatus={meStatus}
-        setMeStatus={setMeStatus}
+        onChangeMyStatus={onChangeMyStatus}
         search={search}
         setSearch={setSearch}
         statusFilters={statusFilters}

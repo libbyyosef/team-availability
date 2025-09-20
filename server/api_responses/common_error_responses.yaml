@@ -1,3 +1,17 @@
+401:
+  description: Unauthorized – Missing or invalid credentials
+  content:
+    application/json:
+      example:
+        detail: Not authenticated
+
+403:
+  description: Forbidden – Authenticated but lacking required permissions
+  content:
+    application/json:
+      example:
+        detail: Not enough permissions
+
 422:
   description: Validation Error - Invalid request body or parameters
   content:
@@ -7,6 +21,7 @@
           - loc: ["body", "field_name"]
             msg: value is not valid
             type: value_error
+
 500:
   description: Internal Server Error
   content:
