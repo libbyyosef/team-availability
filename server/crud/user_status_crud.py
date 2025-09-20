@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from models.user_status_model import UserStatus
-from schemas.user_schema import UserStatusCreate, UserStatusUpdate
+from ..models.user_status_model import UserStatus
+from ..schemas.user_statuses_schema import UserStatusCreate, UserStatusUpdate
 
 
 # <------------------ UPSERT/CREATE -------------------->

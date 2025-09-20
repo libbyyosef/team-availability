@@ -5,8 +5,8 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update, delete
 
-from models.user_model import User
-from schemas.user_schema import (
+from ..models.user_model import User
+from ..schemas.user_schema import (
     UserCreate,
     UserUpdate,
 )

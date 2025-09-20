@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import URL
 
-RAW_URL = os.getenv("DATABASE_URL", "postgresql://app:app@localhost:5432/app")
+RAW_URL = os.getenv("DATABASE_URL", "postgresql://app:app@localhost:5432/team_availability")
 
 def _as_sqlalchemy_url(raw: str) -> str | URL:
     if raw.startswith("postgresql+"):
