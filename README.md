@@ -158,8 +158,3 @@ team-availability/
 
 ---
 
-## Notes
-
-- The **clock** is shown in the UI header to reflect current time.
-- Colors follow the **Pubplus palette** for consistent branding.
-- The frontend calls the API through **`/api`** (same origin) → avoids CORS.
