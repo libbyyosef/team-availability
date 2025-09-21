@@ -1,109 +1,73 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { styles, theme } from "../../../assets/styles/styles";
-import { ALL_STATUSES, fullName, Status } from "../../../assets/types/types";
-import type { User } from "../../../assets/types/types";
 
-/** ---------- label ↔ canonical helpers (typo-tolerant) ---------- */
-const normalizeKey = (s: string) => s.toLowerCase().replace(/[\s\-_]/g, "");
+/** ---------- DB <-> UI status mapping (authoritative) ---------- */
+export const DB_STATUSES = ["working", "working_remotely", "on_vacation", "business_trip"] as const;
+export type DbStatus = (typeof DB_STATUSES)[number];
 
-const CANON_BY_KEY: Record<string, Status> = {
-  // Working
-  working: Status.Working,
-
-  // Working Remotely
-  workingremotely: Status.WorkingRemotely,
-
-  // On Vacation (include common typos)
-  onvacation: Status.OnVacation,
-  vacation: Status.OnVacation,
-  onvaction: Status.OnVacation,
-  onvactaion: Status.OnVacation,
-  onvaciton: Status.OnVacation,
-  onvacay: Status.OnVacation,
-
-  // Business Trip (and backend typo once normalized)
-  businesstrip: Status.BusinessTrip,
-  buissnesstrip: Status.BusinessTrip,
+const UI_BY_DB: Record<DbStatus, string> = {
+  working: "Working",
+  working_remotely: "Working Remotely",
+  on_vacation: "On Vacation",
+  business_trip: "Business Trip",
 };
-
-const canonicalFromLabel = (label: string): Status => {
-  const key = normalizeKey(label);
-  return CANON_BY_KEY[key] ?? (label.replace(/\s+/g, "") as Status);
-};
-
-/**
- * Always show the same label that appears in ALL_STATUSES (filter list).
- * If we can't find a match, fall back to a humanized string (spaces in camelCase),
- * and for "onvaction"-style typos, prefer inserting a space after "on".
- */
-const labelForDisplay = (value: Status | string): string => {
-  const canon = canonicalFromLabel(String(value)); // normalize (handles typos)
-  const fromList = ALL_STATUSES.find((lbl) => canonicalFromLabel(lbl) === canon);
-  if (fromList) return fromList;
-
-  const raw = String(value).trim();
-  // Heuristic for "onvaction" -> "on vaction" (and similar)
-  if (/^on[v]/i.test(normalizeKey(raw))) {
-    return raw.replace(/^\s*on\s*/i, "on ").replace(/\s+/g, " ").trim();
+const dbByUi = (label: string): DbStatus => {
+  const normalized = label.trim().toLowerCase().replace(/\s+/g, "_");
+  switch (normalized) {
+    case "working":
+      return "working";
+    case "working_remotely":
+      return "working_remotely";
+    case "on_vacation":
+      return "on_vacation";
+    case "business_trip":
+      return "business_trip";
+    default:
+      return "working";
   }
+};
+export const dbToUi = (s: string | null | undefined): string =>
+  UI_BY_DB[(s as DbStatus) ?? "working"] ?? "Working";
 
-  // Fallback: humanize the canonical (WorkingRemotely -> "Working Remotely")
-  return canon.replace(/([a-z])([A-Z])/g, "$1 $2");
+/** “On Vacation” row background */
+const VACATION_ROW_BG = "#797a7cff";
+
+/** ---------- Local shapes consumed by the component ---------- */
+export type UserRow = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  status: DbStatus | null; // comes from backend (snake_case) or null
 };
 
-const isVacation = (value: Status | string): boolean =>
-  canonicalFromLabel(String(value)) === Status.OnVacation;
-
-/** ---- Vacation row color (apply to WHOLE ROW) ---- */
-const VACATION_ROW_BG = "#797a7cff"; // uniform darker grey across the entire row
-
-/**
- * Keeps the light-blue table strokes (#D8E4F5), navy text, and yellow accents.
- * Layout is unchanged except the vacation row coloring and status label display.
- */
 export const StatusesComponent: React.FC<{
   userName: string;
-  meStatus: Status;
-  onChangeMyStatus: (next: Status) => void;
+  meStatusDb: DbStatus;                 // my current status (db value)
+  onChangeMyStatus: (nextDb: DbStatus) => void;
   search: string;
   setSearch: (v: string) => void;
-  statusFilters: Status[];
-  toggleFilter: (s: Status) => void;
-  users: User[];
+  statusFiltersDb: DbStatus[];          // active filters (db values)
+  toggleFilterDb: (db: DbStatus) => void;
+  users: UserRow[];                     // includes everyone (you’ll render “others” by excluding me in container)
   onLogout: () => void;
   sortBy: "name" | "status";
   sortDir: "asc" | "desc";
   onToggleSort: (col: "name" | "status") => void;
 }> = ({
   userName,
-  meStatus,
+  meStatusDb,
   onChangeMyStatus,
   search,
   setSearch,
-  statusFilters,
-  toggleFilter,
+  statusFiltersDb,
+  toggleFilterDb,
   users,
   onLogout,
   sortBy,
   sortDir,
   onToggleSort,
 }) => {
-  const statusPhrase = (s: Status) => {
-    switch (s) {
-      case Status.Working:
-        return "working";
-      case Status.WorkingRemotely:
-        return "working remotely";
-      case Status.OnVacation:
-        return "on vacation";
-      case Status.BusinessTrip:
-        return "on business trip";
-      default:
-        return String(s).toLowerCase();
-    }
-  };
-
-  const header = `Hello, ${userName}. You are ${statusPhrase(meStatus)}`;
+  const header = `Hello, ${userName}. You are ${dbToUi(meStatusDb).toLowerCase()}.`;
 
   // filter dropdown
   const [open, setOpen] = useState(false);
@@ -119,9 +83,10 @@ export const StatusesComponent: React.FC<{
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filteredStatuses = useMemo(
-    () => ALL_STATUSES.filter((s) => s.toLowerCase().includes(q.trim().toLowerCase())),
-    [q]
+  const FILTER_LABELS = useMemo(() => DB_STATUSES.map((s) => UI_BY_DB[s]), []);
+  const filteredFilterLabels = useMemo(
+    () => FILTER_LABELS.filter((s) => s.toLowerCase().includes(q.trim().toLowerCase())),
+    [FILTER_LABELS, q]
   );
 
   const arrow = (col: "name" | "status") =>
@@ -134,7 +99,6 @@ export const StatusesComponent: React.FC<{
   };
 
   return (
-    // Centering wrapper (kept)
     <div
       style={{
         display: "grid",
@@ -144,7 +108,6 @@ export const StatusesComponent: React.FC<{
         padding: 16,
       }}
     >
-      {/* Main card */}
       <div
         style={{
           ...styles.dashboardWrap,
@@ -221,20 +184,16 @@ export const StatusesComponent: React.FC<{
             Update my current status
           </div>
 
-          {/* Option value = canonical; text = label (typo tolerant mapping when read) */}
           <select
             style={{ ...styles.select, minWidth: 220 }}
-            value={meStatus}
-            onChange={(e) => onChangeMyStatus(e.target.value as Status)}
+            value={meStatusDb}
+            onChange={(e) => onChangeMyStatus(e.target.value as DbStatus)}
           >
-            {ALL_STATUSES.map((label) => {
-              const canon = canonicalFromLabel(label);
-              return (
-                <option key={label} value={canon}>
-                  {label}
-                </option>
-              );
-            })}
+            {DB_STATUSES.map((db) => (
+              <option key={db} value={db}>
+                {UI_BY_DB[db]}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -277,16 +236,16 @@ export const StatusesComponent: React.FC<{
                   background: "#fff",
                   border: "1px solid #D8E4F5",
                   borderRadius: 10,
-                  color: statusFilters.length ? "#0B2537" : "#4B6172",
+                  color: statusFiltersDb.length ? "#0B2537" : "#4B6172",
                   padding: "10px 12px",
                   cursor: "pointer",
                   fontWeight: 400,
                   textAlign: "left",
                 }}
               >
-                {statusFilters.length === ALL_STATUSES.length
+                {statusFiltersDb.length === DB_STATUSES.length
                   ? "All statuses"
-                  : `Selected (${statusFilters.length})`}
+                  : `Selected (${statusFiltersDb.length})`}
               </button>
 
               {open && (
@@ -329,13 +288,7 @@ export const StatusesComponent: React.FC<{
                   />
 
                   <div style={{ maxHeight: 200, overflowY: "auto", paddingRight: 4 }}>
-                    {ALL_STATUSES.length === 0 && (
-                      <div style={{ color: "#4B6172", fontSize: 13, padding: "6px 2px" }}>
-                        No statuses.
-                      </div>
-                    )}
-
-                    {/* “All” toggle (canonical) */}
+                    {/* “All” toggle */}
                     <label
                       style={{
                         display: "flex",
@@ -351,15 +304,14 @@ export const StatusesComponent: React.FC<{
                     >
                       <input
                         type="checkbox"
-                        checked={statusFilters.length === ALL_STATUSES.length}
+                        checked={statusFiltersDb.length === DB_STATUSES.length}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            ALL_STATUSES.forEach((label) => {
-                              const canon = canonicalFromLabel(label);
-                              if (!statusFilters.includes(canon)) toggleFilter(canon);
+                            DB_STATUSES.forEach((db) => {
+                              if (!statusFiltersDb.includes(db)) toggleFilterDb(db);
                             });
                           } else {
-                            [...statusFilters].forEach((canon) => toggleFilter(canon));
+                            [...statusFiltersDb].forEach((db) => toggleFilterDb(db));
                           }
                         }}
                       />
@@ -367,9 +319,9 @@ export const StatusesComponent: React.FC<{
                     </label>
 
                     {/* Individual toggles */}
-                    {filteredStatuses.map((label) => {
-                      const canon = canonicalFromLabel(label);
-                      const checked = statusFilters.includes(canon);
+                    {filteredFilterLabels.map((label) => {
+                      const db = dbByUi(label);
+                      const checked = statusFiltersDb.includes(db);
                       return (
                         <label
                           key={label}
@@ -384,11 +336,7 @@ export const StatusesComponent: React.FC<{
                             cursor: "pointer",
                           }}
                         >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleFilter(canon)}
-                          />
+                          <input type="checkbox" checked={checked} onChange={() => toggleFilterDb(db)} />
                           {label}
                         </label>
                       );
@@ -414,34 +362,22 @@ export const StatusesComponent: React.FC<{
               </thead>
               <tbody>
                 {users.map((u) => {
-                  const vac = isVacation(u.status);
+                  const isVac = u.status === "on_vacation";
                   return (
                     <tr
                       key={u.id}
-                      style={
-                        vac
-                          ? {
-                              ...(styles.vacationRow ?? {}),
-                              background: VACATION_ROW_BG, // apply to whole row
-                            }
-                          : undefined
-                      }
+                      style={isVac ? { ...(styles.vacationRow ?? {}), background: VACATION_ROW_BG } : undefined}
                     >
-                      <td
-                        style={{
-                          ...styles.td,
-                          ...(vac ? { background: VACATION_ROW_BG } : null),
-                        }}
-                      >
-                        {fullName(u)}
+                      <td style={{ ...styles.td, ...(isVac ? { background: VACATION_ROW_BG } : null) }}>
+                        {u.firstName} {u.lastName}
                       </td>
                       <td
                         style={{
                           ...styles.td,
-                          ...(vac ? { background: VACATION_ROW_BG, fontWeight: 700 } : null),
+                          ...(isVac ? { background: VACATION_ROW_BG, fontWeight: 700 } : null),
                         }}
                       >
-                        {labelForDisplay(u.status)}
+                        {dbToUi(u.status)}
                       </td>
                     </tr>
                   );

@@ -1,15 +1,15 @@
 import React from "react";
 import { styles, theme } from "../../../assets/styles/styles";
 
-
 export const LoginComponent: React.FC<{
   username: string;
   password: string;
   onChangeUser: (v: string) => void;
   onChangePass: (v: string) => void;
   onLogin: () => void;
-}> = ({ username, password, onChangeUser, onChangePass, onLogin }) => {
-  const canSubmit = username.trim().length > 0 && password.trim().length > 0;
+  loading?: boolean;
+}> = ({ username, password, onChangeUser, onChangePass, onLogin, loading = false }) => {
+  const canSubmit = username.trim().length > 0 && password.trim().length > 0 && !loading;
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
@@ -26,7 +26,6 @@ export const LoginComponent: React.FC<{
         display: "grid",
         gridTemplateRows: "auto 1fr",
         rowGap: 12,
-        /* was a local gradient — remove so global blue/white shows */
         background: "transparent",
       }}
     >
@@ -64,7 +63,7 @@ export const LoginComponent: React.FC<{
       >
         <div
           style={{
-            ...styles.centerCard,         // white card
+            ...styles.centerCard,
             maxWidth: 480,
             boxShadow: "0 18px 45px rgba(14,107,216,0.12)",
             border: "1px solid #D8E4F5",
@@ -104,7 +103,7 @@ export const LoginComponent: React.FC<{
               }}
               disabled={!canSubmit}
             >
-              Login
+              {loading ? "Logging in..." : "Login"}
             </button>
           </form>
         </div>
