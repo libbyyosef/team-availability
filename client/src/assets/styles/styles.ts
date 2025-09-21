@@ -9,7 +9,7 @@ export const theme = {
   border: "#aeccf3ff",
   white: "#eeeeeeee",
   grayRow: "#c5c7caff",
-
+  panel: "#F5F7FB",
   textPrimary: "#0B2537",   
   textSecondary: "#4B6172", 
 };
@@ -76,7 +76,7 @@ appShell: {
   dashboardWrap: {
     width: "100%",
     maxWidth: 980,
-    background: theme.white,
+    background: theme.panel,
     border: `1px solid ${theme.border}`,
     borderRadius: 16,
     padding: 24,

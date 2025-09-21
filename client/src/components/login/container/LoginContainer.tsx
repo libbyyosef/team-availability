@@ -29,7 +29,7 @@ export const LoginContainer: React.FC<{
     if (loading) return;
 
     (async () => {
-      const email = username.trim().toLowerCase();
+      const email = username.trim();
       const pass = password.trim();
 
       if (!email || !pass) {

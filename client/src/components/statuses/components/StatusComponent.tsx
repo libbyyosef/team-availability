@@ -124,15 +124,13 @@ export const StatusesComponent: React.FC<{
       }}
     >
       <div
-        style={{
-          ...styles.dashboardWrap,
-          background:
-            "linear-gradient(180deg, rgba(216,228,245,0.24) 0%, rgba(216,228,245,0.08) 100%)",
-          borderRadius: 16,
-          padding: 16,
-          width: "100%",
-          maxWidth: 980,
-        }}
+          style={{
+    ...styles.dashboardWrap, // use the solid bg from styles
+    borderRadius: 16,
+    padding: 16,
+    width: "100%",
+    maxWidth: 980,
+  }}
       >
         {/* Header + Logout */}
         <div
