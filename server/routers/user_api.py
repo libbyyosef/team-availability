@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from server.routers.deps import get_current_user
+from server.routers.deps import get_current_user, require_uid_match
 from server.sql_db.db import get_db
 from server.routers.responses import load_responses
 from server.schemas.user_schema import (
@@ -19,7 +19,7 @@ from server.schemas.user_schema import (
 from server.crud import user_crud
 from server.models.user_model import User
 from server.models.user_status_model import UserStatus
-from server.routers.cookies import decrypt_cookie  # NEW
+from server.crud.cookies import decrypt_cookie  # NEW
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -40,19 +40,19 @@ class UsersNameStatusList(BaseModel):
 
 
 # ------------------ CREATE  -------------------
-@router.post(
-    "/create_user",
-    response_model=UserPublic,
-    status_code=201,
-    summary="Create user",
-    responses={
-        201: user_responses.get("create_user_201", {}),
-        400: user_responses.get("create_user_400", {}),
-        409: user_responses.get("create_user_409", {}),
-        422: common_error_responses[422],
-        500: common_error_responses[500],
-    },
-)
+# @router.post(
+#     "/create_user",
+#     response_model=UserPublic,
+#     status_code=201,
+#     summary="Create user",
+#     responses={
+#         201: user_responses.get("create_user_201", {}),
+#         400: user_responses.get("create_user_400", {}),
+#         409: user_responses.get("create_user_409", {}),
+#         422: common_error_responses[422],
+#         500: common_error_responses[500],
+#     },
+# )
 def create_user(payload: UserCreate, db: Session = Depends(get_db)):
     """
     Create a user. **password** must be a HASH (bcrypt/argon2).
@@ -66,39 +66,24 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
 
 # ------------------ GET  -------------------
 
-@router.get(
-    "/list_users_with_statuses",
-    response_model=UsersNameStatusList,
-    summary="List all users with their current status (auth required)",
-)
+@router.get("/list_users_with_statuses", response_model=UsersNameStatusList)
 def list_users_with_statuses(
+    user_id: int = Query(..., ge=1),
     db: Session = Depends(get_db),
-    current: User = Depends(get_current_user),
+    current: User = Depends(require_uid_match),
 ):
-    """
-    Returns: [{"id", "first_name", "last_name", "status"}...]
-    Status is NULL if user has no status row yet.
-    """
-    users_with_status = user_crud.list_all_users_with_statuses(db)
-    items = [
-        UserNameStatus(
-            id=user.id,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            status=user.status
-        )
-        for user in users_with_status
-    ]
+    rows = user_crud.list_all_users_with_statuses(db)
+    items = [UserNameStatus(id=r.id, first_name=r.first_name, last_name=r.last_name, status=r.status) for r in rows]
     return {"users": items}
 
 
 
-@router.get(
-    "/get_user_status",
-    response_model=UserNameStatus,
-    summary="Get a user's status (must be yourself)",
-)
-def get_user_status(
+# @router.get(
+#     "/get_current_user_status",
+#     response_model=UserNameStatus,
+#     summary="Get a user's status (must be yourself)",
+# )
+def get_current_user_status(
     user_id: int,
     db: Session = Depends(get_db),
     current: User = Depends(get_current_user),

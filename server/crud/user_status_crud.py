@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from server.models.user_status_model import UserStatus
-from server.schemas.user_statuses_schema import UserStatusCreate, UserStatusUpdate
+from server.schemas.user_statuses_schema import Status, UserStatusCreate, UserStatusUpdate
 
 
 # <------------------ UPSERT/CREATE -------------------->
@@ -42,11 +42,11 @@ def list_user_statuses_by_status(db: Session, status: str, limit: int = 200, off
 
 
 # <------------------ UPDATE -------------------->
-def update_user_status(db: Session, user_id: int, data: UserStatusUpdate) -> Optional[UserStatus]:
+def update_user_status(db: Session, user_id: int, status: Status) -> Optional[UserStatus]:
     row = db.get(UserStatus, user_id)
     if not row:
         return None
-    row.status = data.status
+    row.status = status
     row.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(row)

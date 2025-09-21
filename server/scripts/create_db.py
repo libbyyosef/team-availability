@@ -10,18 +10,15 @@ from dotenv import load_dotenv
 import json, time
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from server.sql_db.db import engine, SessionLocal
-
 from server.crud.user_crud import create_user
 from server.crud.user_status_crud import upsert_user_status
-
 from server.schemas.user_schema import UserCreate
 from server.schemas.user_statuses_schema import UserStatusCreate
 from server.models.user_model import User
-from server.routers.hashing import hash_password  
+from server.crud.hashing import hash_password
 
 DEFAULT_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "sql_db" / "schema.sql"
 
@@ -36,6 +33,9 @@ def apply_schema(sql_text: str) -> None:
 
 def naive_statement_count(sql_text: str) -> int:
     return sum(1 for chunk in sql_text.split(";") if chunk.strip())
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 def log_json(metrics: dict) -> None:
     print(json.dumps(metrics, ensure_ascii=False))
@@ -52,27 +52,55 @@ USERS = [
 ]
 
 def _make_initial_password(first_name: str) -> str:
-    # your convention: FirstName123!?
+    # convention: FirstName123!?
     return f"{first_name}123!?"
 
 def seed_users_and_statuses(db: Session) -> None:
     for u in USERS:
-        derived_pw = _make_initial_password(u["first_name"])
+        # 1) create user
         user_create = UserCreate(
             email=u["email"],
-            password=hash_password(derived_pw),  # <-- hash here (bcrypt)
+            password=hash_password(_make_initial_password(u["first_name"])),  # bcrypt hash
             first_name=u["first_name"],
             last_name=u["last_name"],
         )
         try:
-            print("before create user",user_create)
             user = create_user(db, user_create)
+            log_json({
+                "event": "user_create",
+                "ts": _now_iso(),
+                "action": "created",
+                "user_id": user.id,
+                "email": u["email"],
+                "first_name": u["first_name"],
+                "last_name": u["last_name"],
+            })
         except IntegrityError:
+            # If someone re-runs the script, keep it idempotent
             db.rollback()
+            log_json({
+                "event": "user_create",
+                "ts": _now_iso(),
+                "action": "exists",
+                "email": u["email"],
+                "first_name": u["first_name"],
+                "last_name": u["last_name"],
+            })
+            # Pull existing instance only to get id for status write
+            from sqlalchemy import select
             user = db.execute(select(User).where(User.email == u["email"])).scalar_one()
 
+        # 2) create status (assume created on empty DB; idempotent on re-run)
         status_create = UserStatusCreate(user_id=user.id, status=u["status"])
         upsert_user_status(db, status_create)
+        log_json({
+            "event": "user_status_create",
+            "ts": _now_iso(),
+            "action": "created",   # fresh DB assumption
+            "user_id": user.id,
+            "first_name": u["first_name"],
+            "status": u["status"],
+        })
 
 def main() -> None:
     load_dotenv()
@@ -93,7 +121,7 @@ def main() -> None:
         raise
     finally:
         duration = time.monotonic() - start
-        metrics = {
+        log_json({
             "event": "apply_schema_and_seed_users",
             "schema_path": str(DEFAULT_SCHEMA_PATH),
             "duration_seconds": round(duration, 6),
@@ -102,8 +130,7 @@ def main() -> None:
             "error_type": error_type,
             "ts": ts.isoformat(),
             "ts_unix": int(ts.timestamp()),
-        }
-        log_json(metrics)
+        })
         if success:
             print(f"Schema applied + users & statuses seeded via CRUD. Source: {DEFAULT_SCHEMA_PATH}")
         else:

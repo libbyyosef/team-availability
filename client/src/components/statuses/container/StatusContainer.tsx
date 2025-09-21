@@ -169,7 +169,7 @@ export const StatusesContainer: React.FC<{
 
     (async () => {
       try {
-        const meRes = await fetch(`${API_URL}/users/get_user_status?user_id=${currentUserId}`, {
+        const meRes = await fetch(`${API_URL}/users/get_current_user_status?user_id=${currentUserId}`, {
           credentials: "include",
           cache: "no-store",
           signal: ctrl.signal,
