@@ -6,7 +6,12 @@ from server.routers.auth import router as auth_router
 
 
 
-app = FastAPI(title="Team Availabilty")
+app = FastAPI(
+    title="Team Availability",
+    docs_url=None,      # disables /docs (Swagger UI)
+    redoc_url=None,     # disables /redoc
+    openapi_url=None,   # disables /openapi.json
+)
 
 origins = [
     "http://localhost:5173",  # Vite
