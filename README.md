@@ -18,6 +18,7 @@ UI uses **Pubplus color palette**.
 
 ```bash
 git clone https://github.com/libbyyosef/team-availability.git
+cd team-availability
 docker-compose up --build
 ```
 
