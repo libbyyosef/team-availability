@@ -1,31 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { styles, theme } from "../../../assets/styles/styles";
-
-/** ---------- DB <-> UI status mapping (authoritative) ---------- */
-export const DB_STATUSES = ["working", "working_remotely", "on_vacation", "business_trip"] as const;
-export type DbStatus = (typeof DB_STATUSES)[number];
-
-const UI_BY_DB: Record<DbStatus, string> = {
-  working: "Working",
-  working_remotely: "Working Remotely",
-  on_vacation: "On Vacation",
-  business_trip: "Business Trip",
-};
-const dbByUi = (label: string): DbStatus => {
-  const normalized = label.trim().toLowerCase().replace(/\s+/g, "_");
-  switch (normalized) {
-    case "working": return "working";
-    case "working_remotely": return "working_remotely";
-    case "on_vacation": return "on_vacation";
-    case "business_trip": return "business_trip";
-    default: return "working";
-  }
-};
-export const dbToUi = (s: string | null | undefined): string =>
-  UI_BY_DB[(s as DbStatus) ?? "working"] ?? "Working";
-
-/** “On Vacation” row background */
-const VACATION_ROW_BG = "#797a7cff";
+import {
+  DB_STATUSES,
+  type DbStatus,
+  UI_BY_DB,
+  dbToUi,
+  uiToDb,
+  VACATION_ROW_BG,
+  type Status,
+} from "../../../assets/types/types"
 
 /** ---------- Local shapes consumed by the component ---------- */
 export type UserRow = {
@@ -33,6 +16,28 @@ export type UserRow = {
   firstName: string;
   lastName: string;
   status: DbStatus | null;
+};
+
+const Clock: React.FC<{ size?: number; color?: string }> = ({ size = 34, color = "#fff" }) => {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        fontWeight: 800,
+        fontSize: size,
+        letterSpacing: 1,
+        color,
+        textShadow: "0 2px 10px rgba(0,0,0,0.45)",
+      }}
+    >
+      {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+    </div>
+  );
 };
 
 export const StatusesComponent: React.FC<{
@@ -48,8 +53,6 @@ export const StatusesComponent: React.FC<{
   sortBy: "name" | "status";
   sortDir: "asc" | "desc";
   onToggleSort: (col: "name" | "status") => void;
-
-  // NEW
   isLoading?: boolean;
   lastUpdated?: Date | null;
 }> = ({
@@ -69,9 +72,8 @@ export const StatusesComponent: React.FC<{
   lastUpdated = null,
 }) => {
   const statusLabel = dbToUi(meStatusDb).toLowerCase();
-const header = `Hello, ${userName}. You are ${meStatusDb === "business_trip" ? "on " : ""}${statusLabel}.`;
+  const header = `Hello, ${userName}. You are ${meStatusDb === "business_trip" ? "on " : ""}${statusLabel}.`;
 
-  // filter dropdown
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -122,16 +124,22 @@ const header = `Hello, ${userName}. You are ${meStatusDb === "business_trip" ? "
         width: "100%",
         minHeight: "calc(100dvh - 120px)",
         padding: 16,
+        rowGap: 12, 
       }}
     >
+      {/* Clock above the main statuses card */}
+      <div style={{ width: "100%", display: "flex", justifyContent: "center", marginTop: 8, marginBottom: 8 }}>
+        <Clock />
+      </div>
+
       <div
-          style={{
-    ...styles.dashboardWrap, // use the solid bg from styles
-    borderRadius: 16,
-    padding: 16,
-    width: "100%",
-    maxWidth: 980,
-  }}
+        style={{
+          ...styles.dashboardWrap, 
+          borderRadius: 16,
+          padding: 16,
+          width: "100%",
+          maxWidth: 980,
+        }}
       >
         {/* Header + Logout */}
         <div
@@ -338,7 +346,7 @@ const header = `Hello, ${userName}. You are ${meStatusDb === "business_trip" ? "
 
                     {/* Individual toggles */}
                     {filteredFilterLabels.map((label) => {
-                      const db = dbByUi(label);
+                      const db = uiToDb(label as Status);
                       const checked = statusFiltersDb.includes(db);
                       return (
                         <label
@@ -401,7 +409,7 @@ const header = `Hello, ${userName}. You are ${meStatusDb === "business_trip" ? "
                               ...(isVac ? { background: VACATION_ROW_BG, fontWeight: 700 } : null),
                             }}
                           >
-                            {dbToUi(u.status)}
+                            {dbToUi(u.status as DbStatus)}
                           </td>
                         </tr>
                       );

@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAtom } from "jotai";
 import { useToast } from "@chakra-ui/react";
-import { StatusesComponent, DB_STATUSES, dbToUi } from "../components/StatusComponent";
-import type { DbStatus } from "../components/StatusComponent";
+import { StatusesComponent } from "../components/StatusComponent";
+import {
+  DB_STATUSES,
+  dbToUi,
+  type DbStatus,
+} from "../../../assets/types/types";
 import {
   usersAtom,
   meStatusAtom,
@@ -11,9 +15,7 @@ import {
   type UserRow,
 } from "../../../store/usersAtoms";
 import { styles } from "../../../assets/styles/styles";
-
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const POLL_MS = 180_000 as const;
+import { ENV } from "../../../config/env"
 
 /** Backend payloads */
 type BackendUser = {
@@ -55,7 +57,6 @@ export const StatusesContainer: React.FC<{
   const [lastUpdated, setLastUpdated] = useAtom(lastUpdatedAtom);
   const toast = useToast();
 
-  // local UI state
   const [search, setSearch] = useState("");
   const [statusFiltersDb, setStatusFiltersDb] = useState<DbStatus[]>([...DB_STATUSES]);
   const [sortBy, setSortBy] = useState<SortBy>("name");
@@ -69,7 +70,7 @@ export const StatusesContainer: React.FC<{
 
       try {
         const res = await fetchOnceWithOneRetry(
-          `${API_URL}/users/list_users_with_statuses?user_id=${currentUserId}`,
+          `${ENV.API_URL}/users/list_users_with_statuses?user_id=${currentUserId}`,
           { credentials: "include", cache: "no-store", signal }
         );
 
@@ -118,7 +119,7 @@ export const StatusesContainer: React.FC<{
       if (cancelled) return;
       const c = new AbortController();
       fetchAllUsers({ signal: c.signal, foreground: false });
-    }, POLL_MS);
+    }, ENV.POLL_MS);
 
     return () => {
       cancelled = true;
@@ -141,7 +142,7 @@ export const StatusesContainer: React.FC<{
 
       try {
         const res = await fetch(
-          `${API_URL}/user_statuses/update_current_user_status?user_id=${currentUserId}&status=${encodeURIComponent(
+          `${ENV.API_URL}/user_statuses/update_current_user_status?user_id=${currentUserId}&status=${encodeURIComponent(
             nextDb
           )}`,
           { method: "PUT", credentials: "include" }

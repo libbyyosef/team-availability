@@ -1,5 +1,27 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { styles, theme } from "../../../assets/styles/styles";
+
+const Clock: React.FC<{ size?: number; color?: string }> = ({ size = 34, color = "#fff" }) => {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        fontWeight: 800,
+        fontSize: size,
+        letterSpacing: 1,
+        color,
+        textShadow: "0 2px 10px rgba(0,0,0,0.45)",
+      }}
+    >
+      {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+    </div>
+  );
+};
 
 export const LoginComponent: React.FC<{
   username: string;
@@ -24,16 +46,21 @@ export const LoginComponent: React.FC<{
         height: "100%",
         width: "100%",
         display: "grid",
-        gridTemplateRows: "auto 1fr",
+        gridTemplateRows: "auto auto 1fr", 
         rowGap: 12,
         background: "transparent",
       }}
     >
+      {/* Clock above title */}
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "clamp(24px, 6vh, 60px)" }}>
+        <Clock />
+      </div>
+
       <div
         style={{
           display: "flex",
           justifyContent: "center",
-          paddingTop: "clamp(40px, 10vh, 110px)",
+          paddingTop: "12px",
         }}
       >
         <h1

@@ -1,10 +1,10 @@
 import React, { useCallback, useState } from "react";
 import { LoginComponent } from "../components/LoginComponent";
 import { styles } from "../../../assets/styles/styles";
-import { useToast } from "@chakra-ui/react"; // ✅ added
+import { useToast } from "@chakra-ui/react"; 
+import { ENV } from "../../../config/env"
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const LOGIN_TIMEOUT_MS = 8000;
+
 
 export const LoginContainer: React.FC<{
   onAuthed: (fullName: string, userId: number) => void;
@@ -12,7 +12,7 @@ export const LoginContainer: React.FC<{
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const toast = useToast(); // ✅ added
+  const toast = useToast(); 
 
   const readErrorMessage = async (res: Response): Promise<string> => {
     const ct = res.headers.get("content-type") || "";
@@ -41,10 +41,10 @@ export const LoginContainer: React.FC<{
 
       setLoading(true);
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), LOGIN_TIMEOUT_MS);
+      const timer = setTimeout(() => ctrl.abort(), ENV.LOGIN_TIMEOUT_MS);
 
       try {
-        const res = await fetch(`${API_URL}/auth/login`, {
+        const res = await fetch(`${ENV.API_URL}/auth/login`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -84,7 +84,7 @@ export const LoginContainer: React.FC<{
         setLoading(false);
       }
     })();
-  }, [username, password, loading, onAuthed]); // (deps unchanged)
+  }, [username, password, loading, onAuthed]); 
 
   return (
     <div style={styles.appShell}>

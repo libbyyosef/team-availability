@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List
 from datetime import datetime
 from pydantic import Field, field_validator
-from server.schemas.base import AppModel  # your shared base
+from server.schemas.base import AppModel  
 
 # ---------- Allowed status values (Py3.10-friendly) ----------
 class Status(str, Enum):
@@ -30,7 +30,7 @@ class UserStatusBase(AppModel):
         if s not in _ALLOWED:
             allowed = ", ".join(sorted(_ALLOWED))
             raise ValueError(f"status must be one of: {allowed}")
-        return s  # pydantic will coerce to Status enum
+        return s  
 
 class UserStatusCreate(UserStatusBase):
     user_id: int
@@ -43,7 +43,6 @@ class UserStatusPublic(AppModel):
     status: Status
     updated_at: datetime
 
-    # pydantic v2: enable ORM conversion here (not globally)
     model_config = {**AppModel.model_config, "from_attributes": True}
 
 class UserStatusesList(AppModel):

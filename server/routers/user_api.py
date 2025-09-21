@@ -10,12 +10,7 @@ from pydantic import BaseModel
 from server.routers.deps import get_current_user, require_uid_match
 from server.sql_db.db import get_db
 from server.routers.responses import load_responses
-from server.schemas.user_schema import (
-    UserCreate,
-    UserUpdate,
-    UserPublic,
-    UsersList,
-)
+
 from server.crud import user_crud
 from server.models.user_model import User
 from server.models.user_status_model import UserStatus
@@ -39,28 +34,6 @@ class UsersNameStatusList(BaseModel):
     users: List[UserNameStatus]
 
 
-# ------------------ CREATE  -------------------
-# @router.post(
-#     "/create_user",
-#     response_model=UserPublic,
-#     status_code=201,
-#     summary="Create user",
-#     responses={
-#         201: user_responses.get("create_user_201", {}),
-#         400: user_responses.get("create_user_400", {}),
-#         409: user_responses.get("create_user_409", {}),
-#         422: common_error_responses[422],
-#         500: common_error_responses[500],
-#     },
-# )
-def create_user(payload: UserCreate, db: Session = Depends(get_db)):
-    """
-    Create a user. **password** must be a HASH (bcrypt/argon2).
-    Email uniqueness is case-sensitive (DB-level).
-    """
-    if user_crud.get_user_by_email(db, str(payload.email)):
-        raise HTTPException(status_code=409, detail="Email already exists")
-    return user_crud.create_user(db, payload)
 
 
 
@@ -78,26 +51,3 @@ def list_users_with_statuses(
 
 
 
-# @router.get(
-#     "/get_current_user_status",
-#     response_model=UserNameStatus,
-#     summary="Get a user's status (must be yourself)",
-# )
-def get_current_user_status(
-    user_id: int,
-    db: Session = Depends(get_db),
-    current: User = Depends(get_current_user),
-):
-    if user_id != current.id:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    user_with_status = user_crud.get_user_status_by_id(db, user_id)
-    if not user_with_status:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return UserNameStatus(
-        id=user_with_status.id,
-        first_name=user_with_status.first_name,
-        last_name=user_with_status.last_name,
-        status=user_with_status.status
-    )

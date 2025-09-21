@@ -12,6 +12,5 @@ export type UserRow = {
 export const usersAtom = atom<UserRow[]>([]);
 export const meStatusAtom = atom<DbStatus>("working");
 
-// UX flags
-export const isLoadingAtom = atom<boolean>(true);      // first foreground load only
+export const isLoadingAtom = atom<boolean>(true);     
 export const lastUpdatedAtom = atom<Date | null>(null);

@@ -1,8 +1,7 @@
 from __future__ import annotations
 from typing import Optional, List
 from pydantic import Field, EmailStr, field_validator
-from server.schemas.base import AppModel  # <-- shared base
-
+from server.schemas.base import AppModel  
 class MessageResponse(AppModel):
     detail: str
 

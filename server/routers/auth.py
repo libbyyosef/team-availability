@@ -55,7 +55,6 @@ def login(payload: LoginPayload, response: Response, db: Session = Depends(get_d
     if not user or not verify_password(payload.password, user.password or ""):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Encrypt {"uid": <int>} as cookie value
     token = encrypt_cookie({"user_id": user.id})
 
     cfg = _cookie_settings()
