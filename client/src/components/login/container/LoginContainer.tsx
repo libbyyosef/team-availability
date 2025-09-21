@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { LoginComponent } from "../components/LoginComponent";
+import { styles } from "../../../assets/styles/styles";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const LOGIN_TIMEOUT_MS = 8000;
@@ -84,6 +85,7 @@ export const LoginContainer: React.FC<{
   }, [username, password, loading, onAuthed]);
 
   return (
+    <div style={styles.appShell}>
     <LoginComponent
       username={username}
       password={password}
@@ -92,5 +94,6 @@ export const LoginContainer: React.FC<{
       onLogin={handleLogin}
       loading={loading}
     />
+    </div>
   );
 };

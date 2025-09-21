@@ -9,6 +9,7 @@ import {
   lastUpdatedAtom,
   type UserRow,
 } from "../../../store/usersAtoms";
+import { styles } from "../../../assets/styles/styles";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const POLL_MS = 180_000 as const;
@@ -178,7 +179,7 @@ export const StatusesContainer: React.FC<{
     const q = search.trim().toLowerCase();
     let out = usersRaw.filter((u) => u.id !== currentUserId);
 
-    if (q) out = out.filter((u) => (`${u.firstName} ${u.lastName}`).toLowerCase().includes(q));
+    if (q) out = out.filter((u) => `${u.firstName} ${u.lastName}`.toLowerCase().includes(q));
     if (statusFiltersDb.length > 0) {
       out = out.filter((u) => (u.status ? statusFiltersDb.includes(u.status) : true));
     }
@@ -201,33 +202,36 @@ export const StatusesContainer: React.FC<{
   }, [usersRaw, currentUserId, search, statusFiltersDb, sortBy, sortDir]);
 
   const toggleFilterDb = (db: DbStatus) => {
-    setStatusFiltersDb((prev) =>
-      prev.includes(db) ? prev.filter((x) => x !== db) : [...prev, db]
-    );
+    setStatusFiltersDb((prev) => (prev.includes(db) ? prev.filter((x) => x !== db) : [...prev, db]));
   };
 
   const onToggleSort = (col: "name" | "status") => {
     if (col === sortBy) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortBy(col); setSortDir("asc"); }
+    else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
   };
 
   return (
-    <StatusesComponent
-      userName={userName}
-      meStatusDb={meStatusDb}
-      onChangeMyStatus={onChangeMyStatus}
-      search={search}
-      setSearch={setSearch}
-      statusFiltersDb={statusFiltersDb}
-      toggleFilterDb={toggleFilterDb}
-      users={filteredUsers}
-      onLogout={onLogout}
-      sortBy={sortBy}
-      sortDir={sortDir}
-      onToggleSort={onToggleSort}
-      // loading + timestamp for header/skeleton
-      isLoading={isLoading}
-      lastUpdated={lastUpdated}
-    />
+    <div style={styles.appShell}>
+      <StatusesComponent
+        userName={userName}
+        meStatusDb={meStatusDb}
+        onChangeMyStatus={onChangeMyStatus}
+        search={search}
+        setSearch={setSearch}
+        statusFiltersDb={statusFiltersDb}
+        toggleFilterDb={toggleFilterDb}
+        users={filteredUsers}
+        onLogout={onLogout}
+        sortBy={sortBy}
+        sortDir={sortDir}
+        onToggleSort={onToggleSort}
+        // loading + timestamp for header/skeleton
+        isLoading={isLoading}
+        lastUpdated={lastUpdated}
+      />
+    </div>
   );
 };
