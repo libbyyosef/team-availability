@@ -14,16 +14,11 @@ const UI_BY_DB: Record<DbStatus, string> = {
 const dbByUi = (label: string): DbStatus => {
   const normalized = label.trim().toLowerCase().replace(/\s+/g, "_");
   switch (normalized) {
-    case "working":
-      return "working";
-    case "working_remotely":
-      return "working_remotely";
-    case "on_vacation":
-      return "on_vacation";
-    case "business_trip":
-      return "business_trip";
-    default:
-      return "working";
+    case "working": return "working";
+    case "working_remotely": return "working_remotely";
+    case "on_vacation": return "on_vacation";
+    case "business_trip": return "business_trip";
+    default: return "working";
   }
 };
 export const dbToUi = (s: string | null | undefined): string =>
@@ -37,22 +32,26 @@ export type UserRow = {
   id: number;
   firstName: string;
   lastName: string;
-  status: DbStatus | null; // comes from backend (snake_case) or null
+  status: DbStatus | null;
 };
 
 export const StatusesComponent: React.FC<{
   userName: string;
-  meStatusDb: DbStatus;                 // my current status (db value)
+  meStatusDb: DbStatus;
   onChangeMyStatus: (nextDb: DbStatus) => void;
   search: string;
   setSearch: (v: string) => void;
-  statusFiltersDb: DbStatus[];          // active filters (db values)
+  statusFiltersDb: DbStatus[];
   toggleFilterDb: (db: DbStatus) => void;
-  users: UserRow[];                     // includes everyone (you’ll render “others” by excluding me in container)
+  users: UserRow[];
   onLogout: () => void;
   sortBy: "name" | "status";
   sortDir: "asc" | "desc";
   onToggleSort: (col: "name" | "status") => void;
+
+  // NEW
+  isLoading?: boolean;
+  lastUpdated?: Date | null;
 }> = ({
   userName,
   meStatusDb,
@@ -66,6 +65,8 @@ export const StatusesComponent: React.FC<{
   sortBy,
   sortDir,
   onToggleSort,
+  isLoading = false,
+  lastUpdated = null,
 }) => {
   const header = `Hello, ${userName}. You are ${dbToUi(meStatusDb).toLowerCase()}.`;
 
@@ -97,6 +98,20 @@ export const StatusesComponent: React.FC<{
     cursor: "pointer",
     userSelect: "none",
   };
+
+  const SkeletonRow: React.FC = () => (
+    <tr>
+      <td style={{ ...styles.td }}>
+        <div style={{ height: 14, width: 160, background: "#E8F0FB", borderRadius: 6 }} />
+      </td>
+      <td style={{ ...styles.td }}>
+        <div style={{ height: 14, width: 120, background: "#E8F0FB", borderRadius: 6 }} />
+      </td>
+    </tr>
+  );
+
+  const lastUpdatedText =
+    lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "";
 
   return (
     <div
@@ -144,6 +159,10 @@ export const StatusesComponent: React.FC<{
           >
             {header}
           </h2>
+
+          <div style={{ marginRight: "auto", color: "#4B6172", fontSize: 12 }}>
+            {!isLoading && lastUpdatedText ? <span>{lastUpdatedText}</span> : null}
+          </div>
 
           <button
             onClick={onLogout}
@@ -361,33 +380,41 @@ export const StatusesComponent: React.FC<{
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => {
-                  const isVac = u.status === "on_vacation";
-                  return (
-                    <tr
-                      key={u.id}
-                      style={isVac ? { ...(styles.vacationRow ?? {}), background: VACATION_ROW_BG } : undefined}
-                    >
-                      <td style={{ ...styles.td, ...(isVac ? { background: VACATION_ROW_BG } : null) }}>
-                        {u.firstName} {u.lastName}
-                      </td>
-                      <td
-                        style={{
-                          ...styles.td,
-                          ...(isVac ? { background: VACATION_ROW_BG, fontWeight: 700 } : null),
-                        }}
-                      >
-                        {dbToUi(u.status)}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {users.length === 0 && (
-                  <tr>
-                    <td style={styles.td} colSpan={2}>
-                      No employees found.
-                    </td>
-                  </tr>
+                {isLoading && users.length === 0 ? (
+                  <>
+                    {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}
+                  </>
+                ) : (
+                  <>
+                    {users.map((u) => {
+                      const isVac = u.status === "on_vacation";
+                      return (
+                        <tr
+                          key={u.id}
+                          style={isVac ? { ...(styles.vacationRow ?? {}), background: VACATION_ROW_BG } : undefined}
+                        >
+                          <td style={{ ...styles.td, ...(isVac ? { background: VACATION_ROW_BG } : null) }}>
+                            {u.firstName} {u.lastName}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isVac ? { background: VACATION_ROW_BG, fontWeight: 700 } : null),
+                            }}
+                          >
+                            {dbToUi(u.status)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {users.length === 0 && !isLoading && (
+                      <tr>
+                        <td style={styles.td} colSpan={2}>
+                          No employees found.
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 )}
               </tbody>
             </table>

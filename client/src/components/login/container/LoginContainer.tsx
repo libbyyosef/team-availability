@@ -11,7 +11,6 @@ export const LoginContainer: React.FC<{
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Attempt to read a helpful error message from FastAPI
   const readErrorMessage = async (res: Response): Promise<string> => {
     const ct = res.headers.get("content-type") || "";
     if (!ct.includes("application/json")) return `Login failed (${res.status}). Please try again.`;
@@ -32,7 +31,6 @@ export const LoginContainer: React.FC<{
       const email = username.trim().toLowerCase();
       const pass = password.trim();
 
-      // 1) Validate inputs
       if (!email || !pass) {
         alert("Enter your email and password.");
         return;
@@ -43,45 +41,33 @@ export const LoginContainer: React.FC<{
       const timer = setTimeout(() => ctrl.abort(), LOGIN_TIMEOUT_MS);
 
       try {
-        // 2) Call backend: POST /auth/login
         const res = await fetch(`${API_URL}/auth/login`, {
           method: "POST",
-          credentials: "include", // <- IMPORTANT: set cookie from backend
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password: pass }),
           signal: ctrl.signal,
         });
-
         clearTimeout(timer);
 
-        // 3) Handle errors -> alert
         if (!res.ok) {
           let msg: string;
           switch (res.status) {
-            case 401:
-              msg = (await readErrorMessage(res)) || "Wrong email or password.";
-              break;
-            case 404:
-              msg = "User not found.";
-              break;
-            case 422:
-              msg = (await readErrorMessage(res)) || "Invalid input.";
-              break;
-            default:
-              msg = (await readErrorMessage(res)) || "Unexpected error. Please try again.";
+            case 401: msg = (await readErrorMessage(res)) || "Wrong email or password."; break;
+            case 404: msg = "User not found."; break;
+            case 422: msg = (await readErrorMessage(res)) || "Invalid input."; break;
+            default : msg = (await readErrorMessage(res)) || "Unexpected error. Please try again.";
           }
           alert(msg);
           return;
         }
 
-        // 4) Success -> parse user and lift to app
-        const user = await res.json(); // backend returns UserPublic
+        const user = await res.json();
         if (!user?.id || !user?.first_name || !user?.last_name) {
           alert("Invalid response from server.");
           return;
         }
 
-        // hand off to app (navigate to statuses screen & load data there)
         const fullName = `${user.first_name} ${user.last_name}`;
         onAuthed(fullName, user.id);
       } catch (err: any) {

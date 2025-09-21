@@ -1,6 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useAtom } from "jotai";
 import { StatusesComponent, DB_STATUSES, dbToUi } from "../components/StatusComponent";
 import type { DbStatus } from "../components/StatusComponent";
+import {
+  usersAtom,
+  meStatusAtom,
+  isLoadingAtom,
+  lastUpdatedAtom,
+  type UserRow,
+} from "../../../store/usersAtoms";
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const POLL_MS = 180_000 as const;
 
@@ -9,17 +18,9 @@ type BackendUser = {
   id: number;
   first_name: string;
   last_name: string;
-  status: DbStatus | null; // snake_case or null
-};
-type BackendUsersList = { users: BackendUser[] };
-
-/** Local user row (matches component) */
-type UserRow = {
-  id: number;
-  firstName: string;
-  lastName: string;
   status: DbStatus | null;
 };
+type BackendUsersList = { users: BackendUser[] };
 
 const mapUser = (u: BackendUser): UserRow => ({
   id: u.id,
@@ -27,6 +28,16 @@ const mapUser = (u: BackendUser): UserRow => ({
   lastName: u.last_name,
   status: (u.status ?? "working") as DbStatus | null,
 });
+
+// one retry helper: only 1 retry on network failure (not for non-OK statuses)
+async function fetchOnceWithOneRetry(input: RequestInfo | URL, init: RequestInit = {}) {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    await new Promise((r) => setTimeout(r, 300));
+    return await fetch(input, init);
+  }
+}
 
 type SortBy = "name" | "status";
 type SortDir = "asc" | "desc";
@@ -36,18 +47,25 @@ export const StatusesContainer: React.FC<{
   onLogout: () => void;
   currentUserId: number;
 }> = ({ userName, onLogout, currentUserId }) => {
-  const [usersRaw, setUsersRaw] = useState<UserRow[]>([]);
-  const [meStatusDb, setMeStatusDb] = useState<DbStatus>("working");
+  const [usersRaw, setUsersRaw] = useAtom(usersAtom);
+  const [meStatusDb, setMeStatusDb] = useAtom(meStatusAtom);
+  const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
+  const [lastUpdated, setLastUpdated] = useAtom(lastUpdatedAtom);
+
+  // local UI state
   const [search, setSearch] = useState("");
   const [statusFiltersDb, setStatusFiltersDb] = useState<DbStatus[]>([...DB_STATUSES]);
   const [sortBy, setSortBy] = useState<SortBy>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  /** Fetch all users and set my status from that list */
+  /** Fetch all users and set my status (foreground or poll) */
   const fetchAllUsers = useCallback(
-    async (signal?: AbortSignal) => {
+    async (opts: { signal?: AbortSignal; foreground?: boolean } = {}) => {
+      const { signal, foreground = false } = opts;
+      if (foreground) setIsLoading(true);
+
       try {
-        const res = await fetch(
+        const res = await fetchOnceWithOneRetry(
           `${API_URL}/users/list_users_with_statuses?user_id=${currentUserId}`,
           { credentials: "include", cache: "no-store", signal }
         );
@@ -58,34 +76,45 @@ export const StatusesContainer: React.FC<{
             onLogout();
             return;
           }
-          alert(`Failed to load users (${res.status}).`);
+          // keep showing previous data if polling; if first load and empty -> alert
+          if (foreground || usersRaw.length === 0) {
+            alert(`Failed to load users (${res.status}).`);
+          }
           return;
         }
 
         const data: BackendUsersList = await res.json();
         const mapped = data.users.map(mapUser);
         setUsersRaw(mapped);
-
         const me = data.users.find((u) => u.id === currentUserId);
         if (me) setMeStatusDb((me.status ?? "working") as DbStatus);
+        setLastUpdated(new Date());
       } catch {
-        alert("Network error. Please try again.");
+        if (foreground || usersRaw.length === 0) {
+          alert("Network error. Please try again.");
+        }
+      } finally {
+        if (foreground) setIsLoading(false);
       }
     },
-    [onLogout, currentUserId]
+    [onLogout, currentUserId, usersRaw.length, setUsersRaw, setMeStatusDb, setIsLoading, setLastUpdated]
   );
 
-  // initial + polling
+  // initial load (foreground) + polling every 3 minutes (background)
   useEffect(() => {
     let cancelled = false;
     const ctrl = new AbortController();
 
-    fetchAllUsers(ctrl.signal);
+    (async () => {
+      // small cookie-settle delay helps avoid immediate race after login
+      await new Promise((r) => setTimeout(r, 200));
+      if (!cancelled) await fetchAllUsers({ signal: ctrl.signal, foreground: true });
+    })();
 
-    const id = setInterval(() => {
+    const id = window.setInterval(() => {
       if (cancelled) return;
       const c = new AbortController();
-      fetchAllUsers(c.signal);
+      fetchAllUsers({ signal: c.signal, foreground: false });
     }, POLL_MS);
 
     return () => {
@@ -95,27 +124,33 @@ export const StatusesContainer: React.FC<{
     };
   }, [fetchAllUsers]);
 
-  /** Update my status via exposed endpoint (query params only) */
+  /** Update my status → optimistic update; on error revert */
   const onChangeMyStatus = useCallback(
     async (nextDb: DbStatus) => {
       if (nextDb === meStatusDb) return;
 
       const prev = meStatusDb;
       setMeStatusDb(nextDb);
+      // optimistic: reflect in table immediately
+      setUsersRaw((prevUsers) =>
+        prevUsers.map((u) => (u.id === currentUserId ? { ...u, status: nextDb } : u))
+      );
 
       try {
         const res = await fetch(
           `${API_URL}/user_statuses/update_current_user_status?user_id=${currentUserId}&status=${encodeURIComponent(
             nextDb
           )}`,
-          {
-            method: "PUT",
-            credentials: "include",
-          }
+          { method: "PUT", credentials: "include" }
         );
 
         if (!res.ok) {
+          // revert
           setMeStatusDb(prev);
+          setUsersRaw((prevUsers) =>
+            prevUsers.map((u) => (u.id === currentUserId ? { ...u, status: prev } : u))
+          );
+
           let detail = "";
           try {
             const d = await res.json();
@@ -125,18 +160,17 @@ export const StatusesContainer: React.FC<{
           return;
         }
 
-        // reflect in table
-        setUsersRaw((prevUsers) =>
-          prevUsers.map((u) => (u.id === currentUserId ? { ...u, status: nextDb } : u))
-        );
-
+        setLastUpdated(new Date());
         alert(`Status updated to "${dbToUi(nextDb)}".`);
       } catch {
         setMeStatusDb(prev);
+        setUsersRaw((prevUsers) =>
+          prevUsers.map((u) => (u.id === currentUserId ? { ...u, status: prev } : u))
+        );
         alert("Network error. Please try again.");
       }
     },
-    [meStatusDb, currentUserId]
+    [meStatusDb, currentUserId, setMeStatusDb, setUsersRaw, setLastUpdated]
   );
 
   /** Filter/sort (exclude me from the grid of “others”) */
@@ -144,9 +178,7 @@ export const StatusesContainer: React.FC<{
     const q = search.trim().toLowerCase();
     let out = usersRaw.filter((u) => u.id !== currentUserId);
 
-    if (q) {
-      out = out.filter((u) => (`${u.firstName} ${u.lastName}`).toLowerCase().includes(q));
-    }
+    if (q) out = out.filter((u) => (`${u.firstName} ${u.lastName}`).toLowerCase().includes(q));
     if (statusFiltersDb.length > 0) {
       out = out.filter((u) => (u.status ? statusFiltersDb.includes(u.status) : true));
     }
@@ -176,10 +208,7 @@ export const StatusesContainer: React.FC<{
 
   const onToggleSort = (col: "name" | "status") => {
     if (col === sortBy) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortBy(col);
-      setSortDir("asc");
-    }
+    else { setSortBy(col); setSortDir("asc"); }
   };
 
   return (
@@ -196,6 +225,9 @@ export const StatusesContainer: React.FC<{
       sortBy={sortBy}
       sortDir={sortDir}
       onToggleSort={onToggleSort}
+      // loading + timestamp for header/skeleton
+      isLoading={isLoading}
+      lastUpdated={lastUpdated}
     />
   );
 };
