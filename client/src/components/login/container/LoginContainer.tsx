@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { LoginComponent } from "../components/LoginComponent";
 import { styles } from "../../../assets/styles/styles";
 import { useToast } from "@chakra-ui/react"; 
@@ -44,7 +44,7 @@ export const LoginContainer: React.FC<{
       const timer = setTimeout(() => ctrl.abort(), ENV.LOGIN_TIMEOUT_MS);
 
       try {
-        const res = await fetch(`${ENV.API_URL}/auth/login`, {
+        const res = await fetch(`${ENV.API_BASE}/auth/login`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },

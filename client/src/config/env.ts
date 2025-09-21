@@ -3,4 +3,5 @@ export const ENV = {
   LOGIN_TIMEOUT_MS: Number(import.meta.env.VITE_LOGIN_TIMEOUT_MS ?? 8000),
    COOKIE_NAME: import.meta.env.VITE_COOKIE_NAME ?? "auth",
    POLL_MS: Number(import.meta.env.VITE_POLL_MS ?? 180000),
+   API_BASE : import.meta.env.VITE_API_URL || "/api"
 };
