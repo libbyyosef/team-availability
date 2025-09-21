@@ -114,8 +114,9 @@ export const StatusesComponent: React.FC<{
   );
 
   const lastUpdatedText =
-    lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "";
-
+  lastUpdated
+    ? `Last updated ${lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}`
+    : "";
   return (
     <div
       style={{
