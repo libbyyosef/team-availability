@@ -271,7 +271,7 @@ export const StatusesComponent: React.FC<{
                 }}
               >
                 {statusFiltersDb.length === DB_STATUSES.length
-                  ? "All statuses"
+                  ? "Filter By Status "
                   : `Selected (${statusFiltersDb.length})`}
               </button>
 
