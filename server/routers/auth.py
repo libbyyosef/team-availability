@@ -1,4 +1,3 @@
-# server/api/routes/auth.py
 from __future__ import annotations
 import os
 from typing import Literal, Optional
@@ -75,7 +74,7 @@ def login(payload: LoginPayload, response: Response, db: Session = Depends(get_d
 @router.post("/logout", summary="Logout & clear auth cookie")
 def logout(_request: Request, response: Response):
     cfg = _cookie_settings()
-    # No need to read/decrypt the cookie. Deletion is by (name, domain, path).
+    
     response.delete_cookie(
         key=cfg["name"],
         path=cfg["path"],
@@ -83,5 +82,5 @@ def logout(_request: Request, response: Response):
         samesite=cfg["samesite"],
         secure=cfg["secure"],
     )
-    # 204 No Content is also a fine choice; JSON OK for simplicity
+    
     return {"ok": True}

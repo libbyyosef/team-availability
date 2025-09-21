@@ -1,4 +1,3 @@
-# server/routers/deps.py
 from __future__ import annotations
 import os
 
@@ -8,9 +7,8 @@ from sqlalchemy.orm import Session
 from server.models.user_model import User
 from server.sql_db.db import get_db
 from server.crud import user_crud
-from server.crud.cookies import decrypt_cookie  # Fernet helpers
+from server.crud.cookies import decrypt_cookie  
 
-# Read from env (default to "auth" to match your .env)
 COOKIE_NAME = os.getenv("COOKIE_NAME", "auth")
 
 def get_current_user(request: Request, db: Session = Depends(get_db)):
