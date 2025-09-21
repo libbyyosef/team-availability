@@ -68,7 +68,8 @@ export const StatusesComponent: React.FC<{
   isLoading = false,
   lastUpdated = null,
 }) => {
-  const header = `Hello, ${userName}. You are ${dbToUi(meStatusDb).toLowerCase()}.`;
+  const statusLabel = dbToUi(meStatusDb).toLowerCase();
+const header = `Hello, ${userName}. You are ${meStatusDb === "business_trip" ? "on " : ""}${statusLabel}.`;
 
   // filter dropdown
   const [open, setOpen] = useState(false);

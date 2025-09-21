@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { LoginComponent } from "../components/LoginComponent";
 import { styles } from "../../../assets/styles/styles";
+import { useToast } from "@chakra-ui/react"; // ✅ added
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const LOGIN_TIMEOUT_MS = 8000;
@@ -11,6 +12,7 @@ export const LoginContainer: React.FC<{
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const toast = useToast(); // ✅ added
 
   const readErrorMessage = async (res: Response): Promise<string> => {
     const ct = res.headers.get("content-type") || "";
@@ -33,7 +35,7 @@ export const LoginContainer: React.FC<{
       const pass = password.trim();
 
       if (!email || !pass) {
-        alert("Enter your email and password.");
+        toast({ status: "error", title: "Missing details", description: "Enter your email and password.", isClosable: true });
         return;
       }
 
@@ -59,13 +61,13 @@ export const LoginContainer: React.FC<{
             case 422: msg = (await readErrorMessage(res)) || "Invalid input."; break;
             default : msg = (await readErrorMessage(res)) || "Unexpected error. Please try again.";
           }
-          alert(msg);
+          toast({ status: "error", title: "Login failed", description: msg, isClosable: true });
           return;
         }
 
         const user = await res.json();
         if (!user?.id || !user?.first_name || !user?.last_name) {
-          alert("Invalid response from server.");
+          toast({ status: "error", title: "Invalid response", description: "Invalid response from server.", isClosable: true });
           return;
         }
 
@@ -74,26 +76,26 @@ export const LoginContainer: React.FC<{
       } catch (err: any) {
         clearTimeout(timer);
         if (err?.name === "AbortError") {
-          alert("Request timed out. Please try again.");
+          toast({ status: "error", title: "Timeout", description: "Request timed out. Please try again.", isClosable: true });
         } else {
-          alert("Network error. Please check your connection and try again.");
+          toast({ status: "error", title: "Network error", description: "Please check your connection and try again.", isClosable: true });
         }
       } finally {
         setLoading(false);
       }
     })();
-  }, [username, password, loading, onAuthed]);
+  }, [username, password, loading, onAuthed]); // (deps unchanged)
 
   return (
     <div style={styles.appShell}>
-    <LoginComponent
-      username={username}
-      password={password}
-      onChangeUser={setUsername}
-      onChangePass={setPassword}
-      onLogin={handleLogin}
-      loading={loading}
-    />
+      <LoginComponent
+        username={username}
+        password={password}
+        onChangeUser={setUsername}
+        onChangePass={setPassword}
+        onLogin={handleLogin}
+        loading={loading}
+      />
     </div>
   );
 };

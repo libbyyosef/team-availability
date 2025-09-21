@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAtom } from "jotai";
+import { useToast } from "@chakra-ui/react";
 import { StatusesComponent, DB_STATUSES, dbToUi } from "../components/StatusComponent";
 import type { DbStatus } from "../components/StatusComponent";
 import {
@@ -52,6 +53,7 @@ export const StatusesContainer: React.FC<{
   const [meStatusDb, setMeStatusDb] = useAtom(meStatusAtom);
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
   const [lastUpdated, setLastUpdated] = useAtom(lastUpdatedAtom);
+  const toast = useToast();
 
   // local UI state
   const [search, setSearch] = useState("");
@@ -73,13 +75,13 @@ export const StatusesContainer: React.FC<{
 
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
-            alert("Session expired. Please log in again.");
+            toast({ status: "warning", title: "Session expired", description: "Please log in again.", isClosable: true });
             onLogout();
             return;
           }
-          // keep showing previous data if polling; if first load and empty -> alert
+          // keep showing previous data if polling; if first load and empty -> toast
           if (foreground || usersRaw.length === 0) {
-            alert(`Failed to load users (${res.status}).`);
+            toast({ status: "error", title: "Load failed", description: `Failed to load users (${res.status}).`, isClosable: true });
           }
           return;
         }
@@ -92,13 +94,13 @@ export const StatusesContainer: React.FC<{
         setLastUpdated(new Date());
       } catch {
         if (foreground || usersRaw.length === 0) {
-          alert("Network error. Please try again.");
+          toast({ status: "error", title: "Network error", description: "Please try again.", isClosable: true });
         }
       } finally {
         if (foreground) setIsLoading(false);
       }
     },
-    [onLogout, currentUserId, usersRaw.length, setUsersRaw, setMeStatusDb, setIsLoading, setLastUpdated]
+    [onLogout, currentUserId, usersRaw.length, setUsersRaw, setMeStatusDb, setIsLoading, setLastUpdated, toast]
   );
 
   // initial load (foreground) + polling every 3 minutes (background)
@@ -157,21 +159,26 @@ export const StatusesContainer: React.FC<{
             const d = await res.json();
             detail = typeof d?.detail === "string" ? d.detail : "";
           } catch {}
-          alert(detail || `Failed to update status (${res.status}).`);
+          toast({
+            status: "error",
+            title: "Update failed",
+            description: detail || `Failed to update status (${res.status}).`,
+            isClosable: true,
+          });
           return;
         }
 
         setLastUpdated(new Date());
-        alert(`Status updated to "${dbToUi(nextDb)}".`);
+        toast({ status: "success", title: "Status updated", description: `Status updated to "${dbToUi(nextDb)}".`, isClosable: true });
       } catch {
         setMeStatusDb(prev);
         setUsersRaw((prevUsers) =>
           prevUsers.map((u) => (u.id === currentUserId ? { ...u, status: prev } : u))
         );
-        alert("Network error. Please try again.");
+        toast({ status: "error", title: "Network error", description: "Please try again.", isClosable: true });
       }
     },
-    [meStatusDb, currentUserId, setMeStatusDb, setUsersRaw, setLastUpdated]
+    [meStatusDb, currentUserId, setMeStatusDb, setUsersRaw, setLastUpdated, toast]
   );
 
   /** Filter/sort (exclude me from the grid of “others”) */
