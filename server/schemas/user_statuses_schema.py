@@ -1,27 +1,31 @@
 from __future__ import annotations
+from enum import StrEnum
 from typing import List
 from datetime import datetime
-from pydantic import BaseModel, Field,  field_validator
+from pydantic import Field, field_validator
+from server.schemas.base import AppModel  # <-- shared base
 
-# Base with helpful defaults
-class AppModel(BaseModel):
-    model_config = {
-        "extra": "forbid",               # reject unknown fields
-        "str_strip_whitespace": True,    # auto-trim strings
-        "validate_assignment": True,     # re-validate on attribute set
-    }
+class Status(StrEnum):
+    working = "working"
+    working_remotely = "working_remotely"
+    on_vacation = "on_vacation"
+    business_trip = "business_trip"
+
+_ALLOWED = {s.value for s in Status}
 
 class UserStatusBase(AppModel):
-    # allow simple lowercase words separated by underscores (e.g., working, onVacation)
-    status: str = Field(min_length=2, max_length=32, pattern=r"^[a-z_]+$",
-                        description="e.g., 'working', 'onVacation'")
+    status: Status = Field(
+        description="one of: working / working_remotely / on_vacation / business_trip"
+    )
 
-    @field_validator("status")
+    @field_validator("status", mode="before")
     @classmethod
-    def normalize_status(cls, v: str) -> str:
-        # collapse inner spaces to underscores, lowercase
-        v = "_".join(v.split()).lower()
-        return v
+    def _validate_status(cls, v):
+        s = str(v).strip().lower()
+        if s not in _ALLOWED:
+            allowed = ", ".join(sorted(_ALLOWED))
+            raise ValueError(f"status must be one of: {allowed}")
+        return s
 
 class UserStatusCreate(UserStatusBase):
     user_id: int
@@ -31,11 +35,10 @@ class UserStatusUpdate(UserStatusBase):
 
 class UserStatusPublic(AppModel):
     user_id: int
-    status: str
+    status: Status
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {**AppModel.model_config, "from_attributes": True}
 
 class UserStatusesList(AppModel):
     items: List[UserStatusPublic]

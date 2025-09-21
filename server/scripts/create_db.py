@@ -41,14 +41,14 @@ def log_json(metrics: dict) -> None:
     print(json.dumps(metrics, ensure_ascii=False))
 
 USERS = [
-    {"first_name": "Libby",  "last_name": "Yosef",    "email": "libby.yosef@pubplus.com",    "status": "Working"},
-    {"first_name": "Avi",    "last_name": "Cohen",    "email": "avi.cohen@pubplus.com",      "status": "Working"},
-    {"first_name": "Diana",  "last_name": "Tesler",   "email": "diana.tesler@pubplus.com",   "status": "OnVacation"},
-    {"first_name": "Yossi",  "last_name": "Morris",   "email": "yossi.morris@pubplus.com",   "status": "Working"},
-    {"first_name": "Danny",  "last_name": "Rodin",    "email": "danny.rodin@pubplus.com",    "status": "BusinessTrip"},
-    {"first_name": "Efi",    "last_name": "Shmidt",   "email": "efi.shmidt@pubplus.com",     "status": "OnVacation"},
-    {"first_name": "Inbal",  "last_name": "Goldfarb", "email": "inbal.goldfarb@pubplus.com", "status": "Working"},
-    {"first_name": "Dolev",  "last_name": "Aufleger", "email": "dolev.aufleger@pubplus.com", "status": "Working"},
+    {"first_name": "Libby",  "last_name": "Yosef",    "email": "libby.yosef@pubplus.com",    "status": "working"},
+    {"first_name": "Avi",    "last_name": "Cohen",    "email": "avi.cohen@pubplus.com",      "status": "working"},
+    {"first_name": "Diana",  "last_name": "Tesler",   "email": "diana.tesler@pubplus.com",   "status": "on_vacation"},
+    {"first_name": "Yossi",  "last_name": "Morris",   "email": "yossi.morris@pubplus.com",   "status": "working_remotely"},
+    {"first_name": "Danny",  "last_name": "Rodin",    "email": "danny.rodin@pubplus.com",    "status": "business_trip"},
+    {"first_name": "Efi",    "last_name": "Shmidt",   "email": "efi.shmidt@pubplus.com",     "status": "on_vacation"},
+    {"first_name": "Inbal",  "last_name": "Goldfarb", "email": "inbal.goldfarb@pubplus.com", "status": "working"},
+    {"first_name": "Dolev",  "last_name": "Aufleger", "email": "dolev.aufleger@pubplus.com", "status": "working"},
 ]
 
 def _make_initial_password(first_name: str) -> str:
@@ -65,6 +65,7 @@ def seed_users_and_statuses(db: Session) -> None:
             last_name=u["last_name"],
         )
         try:
+            print("before create user",user_create)
             user = create_user(db, user_create)
         except IntegrityError:
             db.rollback()
